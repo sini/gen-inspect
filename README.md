@@ -203,13 +203,13 @@ that replaces `compile`'s body.
 **nixpkgs is not a dependency.** The SQL parser and executor are copied from
 `gen-scope/examples/sql-schema`, which took nixpkgs `lib` — twelve distinct `lib.*` names, six of
 them absent from gen-prelude. `lib/extras.nix` supplies those seven names over `builtins` instead,
-because every gen roster member's `lib/` is nixpkgs-lib-free (ADR-0014) and a framework-stratum member
-declaring nixpkgs as a library input would hand its whole closure to every consumer. `ci/tests/purity.nix`
-is what keeps that from reverting.
+because every gen library's `lib/` is free of the nixpkgs standard library, and a library at this layer
+declaring nixpkgs as a dependency would hand its whole closure to every consumer of this one.
+`ci/tests/purity.nix` is what keeps that from reverting.
 
 **The copies carry an origin header** naming the source revision and the whole diff against it. The
-kind-alias table is **stripped to the identity**: its 23 entries sit at kind position and carry
-ADR-0035 vocabulary that may not enter a gen surface.
+kind-alias table is **stripped to the identity**: its 23 entries sit at kind position and name
+machines, users and networks, and this library's vocabulary is invented end to end.
 
 ## Tests
 
