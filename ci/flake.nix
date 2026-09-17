@@ -42,7 +42,6 @@
             graph
             select
             scope
-            program
             ;
         };
 

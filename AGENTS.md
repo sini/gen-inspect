@@ -9,7 +9,7 @@ makes the conformance true by construction rather than by inspection.
 
 ## The published surface
 
-The library is a function of its injected substrate: `import ./lib { prelude, graph, select, scope, program }`. The root is published **UNAPPLIED** (`flake.nix`'s output is `lib = import ./.;`), which
+The library is a function of its injected substrate: `import ./lib { prelude, graph, select, scope }`. The root is published **UNAPPLIED** (`flake.nix`'s output is `lib = import ./.;`), which
 is the framework-stratum convention — the hub applies it verbatim through `gen/lib/hubSubstrate.nix`,
 so an APPLIED output here would abort every hub evaluation with `attempt to call something which is not a function but a set`.
 
@@ -78,8 +78,10 @@ so an APPLIED output here would abort every hub evaluation with `attempt to call
 ## What this gate does NOT build
 
 The **program route**. Reachability, transitive closure and `WHY` are refused at `compile` **by name**
-— a door, not a stub, so its replacement changes no caller. `gen-scope` and `gen-program` are already
-formals of `lib/default.nix` for exactly that landing.
+— a door, not a stub, so its replacement changes no caller. `gen-scope` is already a formal of
+`lib/default.nix` for exactly that landing; `gen-program` is not, because the hub's substrate fold is a
+function of its `members` binding and `program` is one of the three UNAPPLIED members that fold
+produces. Gate 2 adds the formal, the flake input and the hub's fourth substrate key together.
 
 Also deferred: planted violations across every cell, query/graph parity, a `TERMINOLOGY.md` census,
 picture fidelity against the built svg, and a staleness enforcer for the copied parser.

@@ -12,7 +12,6 @@ genInspect = import gen-inspect/lib {
   graph = gen.graph;
   select = gen.select;
   scope = gen.scope;
-  program = gen.program;
 };
 
 i = genInspect.mkInspector {
@@ -190,10 +189,16 @@ column**, so without its door it returns `[]` at exit 0 and reads as *"the polic
 
 ## Dependencies, and what is not one
 
-Five gen libraries, all **injected as values** — only plain data crosses a gen↔gen boundary.
-`gen-prelude`, `gen-graph` and `gen-select` are what this gate evaluates through; `gen-scope` and
-`gen-program` are the program route's substrate, declared now so that route's landing changes no
-caller.
+Four gen libraries, all **injected as values** — only plain data crosses a gen↔gen boundary.
+`gen-prelude`, `gen-graph` and `gen-select` are what this gate evaluates through; `gen-scope` is the
+program route's evaluator, declared now so that route's landing changes no caller.
+
+The design names a fifth, `gen-program`, and it is **absent by measurement**. The hub injects a
+framework member's substrate through a function of its `members` binding — exactly the eighteen roster
+entries whose `.lib` is published applied — and `program` is one of the three unapplied members that
+the substrate fold itself produces, so it is not in scope where a fourth substrate entry is written.
+Declaring it here would pin a dependency the hub has no way to inject. Gate 2 adds it in the commit
+that replaces `compile`'s body.
 
 **nixpkgs is not a dependency.** The SQL parser and executor are copied from
 `gen-scope/examples/sql-schema`, which took nixpkgs `lib` — twelve distinct `lib.*` names, six of

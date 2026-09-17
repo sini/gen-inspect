@@ -8,13 +8,18 @@
   # (`default.nix`) has a pin source that is not `ci/flake.lock`; ADR-0037's 2026-09-15 amendment
   # forecloses staying there.
   #
-  # ★ THE FIVE ARE THE DESIGN'S DEPENDENCY SET, AND TWO OF THEM ARE THE GATE-2 SEAM.
+  # ★ FOUR OF THE DESIGN'S FIVE DEPENDENCIES, AND THE FIFTH IS NOT DECLARABLE HERE YET.
   # `gen-prelude`, `gen-graph` and `gen-select` are what this gate's code evaluates through.
-  # `gen-scope` and `gen-program` are the PROGRAM ROUTE's substrate: the design's compile rule sends
-  # reachability, transitive closure and `WHY` to the program layer, and at gate 1 that route is a
-  # refusal door rather than a stub precisely so gate 2 replaces the body and changes no caller
-  # (`specs/2026-09-16-gen-inspect-design.md` §2.1, §4). Declaring them now is what makes that
-  # replacement local to `lib/compile.nix`.
+  # `gen-scope` is the PROGRAM ROUTE's evaluator, declared now so gate 2 replaces `lib/compile.nix`'s
+  # body and changes no caller.
+  #
+  # ★★ `gen-program` IS ABSENT BY MEASUREMENT, NOT BY OVERSIGHT. The hub injects a framework member's
+  # substrate through `gen/lib/hubSubstrate.nix`, which is a function of the hub's `members` binding —
+  # exactly the EIGHTEEN roster entries whose `.lib` is published APPLIED. `program` is one of the
+  # three UNAPPLIED members the substrate fold itself produces, so it is not in scope where a fourth
+  # substrate entry is written; the other four are. Declaring the input here while the hub cannot
+  # inject the value would pin a dependency this library has no way to receive. `lib/default.nix`
+  # carries the same note beside the formals.
   #
   # The test runner lives in ./ci, which is a separate flake — the library's dependency graph and
   # its oracle graph are separate, and the second must not enter the first.
@@ -33,10 +38,6 @@
     gen-scope.url = "github:sini/gen-scope";
     gen-scope.inputs.gen-prelude.follows = "gen-prelude";
     gen-scope.inputs.gen-graph.follows = "gen-graph";
-
-    gen-program.url = "github:sini/gen-program";
-    gen-program.inputs.gen-prelude.follows = "gen-prelude";
-    gen-program.inputs.gen-scope.follows = "gen-scope";
   };
 
   outputs = _: {

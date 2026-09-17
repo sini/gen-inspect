@@ -36,7 +36,6 @@
           graph
           select
           scope
-          program
           ;
       };
 

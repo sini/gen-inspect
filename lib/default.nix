@@ -32,16 +32,23 @@
   prelude,
   graph,
   select,
-  # ★ THE GATE-2 SEAM, DECLARED NOW SO THE REPLACEMENT IS LOCAL. `scope` and `program` are the
-  # PROGRAM ROUTE's substrate — the third row of `./compile.nix`'s table, where reachability,
-  # transitive closure and `WHY` compile onto gen-scope's engine. At this gate that route is a
-  # REFUSAL DOOR and neither value is read. They are formals rather than a later widening because
-  # the design fixes the seam now (§4, "the compile rule's second route… gate 2 replaces the body
-  # with the program route and CHANGES NO CALLER"): adding them later would move this library's
-  # formals, its root, the hub's `hubSubstrate.nix`, the hub's `flake.nix` and both locks, which is
-  # a four-file change across two repositories to land a body swap.
+  # ★ THE GATE-2 SEAM. `scope` is the PROGRAM ROUTE's evaluator — the third row of `./compile.nix`'s
+  # table, where reachability, transitive closure and `WHY` compile onto gen-scope's engine. At this
+  # gate that route is a REFUSAL DOOR and the value is not read; it is a formal now rather than a
+  # later widening because the design fixes the seam now (§4, "gate 2 replaces the body with the
+  # program route and CHANGES NO CALLER").
+  #
+  # ★★ gen-program IS NOT A FORMAL HERE, AND THE REASON IS A MEASURED PROPERTY OF THE HUB. The design
+  # names five dependencies; four are takeable and the fifth is not. `gen/lib/hubSubstrate.nix` is a
+  # function of the hub's `members` binding, and `members` holds exactly the EIGHTEEN roster entries
+  # whose flake `.lib` is published APPLIED — measured at the hub: algebra aspects bind class dispatch
+  # graph identity link memo merge prelude product schema scope select settings types view. `program`
+  # is one of the three UNAPPLIED members that the substrate fold itself produces, so it is not in
+  # scope where a fourth substrate entry is written, and asking for it would mean rewriting that fold
+  # to be self-referential — a hub architecture change the design did not specify. `prelude`, `graph`,
+  # `select` and `scope` are all in `members`, so the other four arrive normally. Gate 2 adds this
+  # formal in the same commit that replaces `compile`'s body.
   scope,
-  program,
 }:
 let
   # gen-prelude plus the seven names the copied parser and executor need and the prelude does not
