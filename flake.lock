@@ -94,11 +94,11 @@
         "gen-algebra": "gen-algebra"
       },
       "locked": {
-        "lastModified": 1789782563,
-        "narHash": "sha256-86VHsmGrs3JjIGj30+67HmSbPdUjhyEB3lZWSx5Io5U=",
+        "lastModified": 1789784163,
+        "narHash": "sha256-fOoqP1bXRz0w4GvWsTqXihLmHLqg4JbPCAd20LxetNk=",
         "owner": "sini",
         "repo": "gen-select",
-        "rev": "a5f04c2079ec48416503fbd9599d09e1d9ae1207",
+        "rev": "cab200bbc412ffd6cbe351aa26ad51907f70ad7a",
         "type": "github"
       },
       "original": {
