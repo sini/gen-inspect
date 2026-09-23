@@ -7,70 +7,50 @@
     # nixpkgs-lib-free, which `ci/tests/purity.nix` enforces.
     nixpkgs.url = "https://channels.nixos.org/nixos-unstable/nixexprs.tar.xz";
 
-    # ★ THE HUB IS AN ORACLE INPUT, AND IT IS WHAT MAKES THE ENTRY-PATH CELL POSSIBLE AT ALL. This
-    # library takes its substrate INJECTED and declares its five dependencies directly, so nothing
-    # in `lib/` reaches the hub. The ACCEPTANCE RUN does: the design's cell 2 asserts one query's
-    # answer on BOTH documented hub entry paths — `import <gen> { }` and
-    # `(getFlake <gen>).lib.mkGenLibs { }` — because a DIFFERENCE between them is itself the failure
-    # (`den-hoag-hub-entry-paths-disagree-silently-oii6u`), and a cell that read only one path could
-    # never see it.
-    #
-    # THE DIRECTION IS SAFE AND THE DIRECTION IS THE POINT: the hub enters this repository's ORACLE
-    # graph only. ADR-0037 keeps the library graph and the oracle graph separate, and the root
-    # `flake.lock` beside this one declares the hub nowhere — so a consumer of gen-inspect gains no
-    # edge to the aggregator that pins gen-inspect.
-    gen.url = "github:sini/gen";
-
-    # ★ AND THE HUB PINS THIS REPOSITORY, so the oracle input reaches back: a full-flake `gen`
-    # lands a PUBLISHED gen-inspect in this ci closure beside the `path:..` tree under test, which
-    # is two identity formulas for one node in one evaluation (gen-harness `ci-self-input.nix`).
-    # The override sends the hub's own gen-inspect edge onto the tree already under test — the
-    # third of the three repairs that scanner's message names, and the only one available here:
-    # `gen.flake = false` would satisfy the invariant and DESTROY the cell above, because entry
-    # path 2 is `(getFlake <gen>).lib.mkGenLibs { }` and a source tree has no `lib`.
-    #
-    # WHAT IT DOES NOT CHANGE, stated because the closure edge and the evaluated value are
-    # different questions: no cell here ever read the hub's gen-inspect. `mkLib` composes `../lib`
-    # — this tree — against each path's substrate, and the hub is dereferenced for `prelude`,
-    # `graph`, `select`, `scope` and `program` only. The published node rode along in the hub's
-    # lock and was never evaluated; this removes it from the closure, which is what the invariant
-    # is about.
-    gen-inspect.url = "path:..";
-    gen.inputs.gen-inspect.follows = "gen-inspect";
+    # ★ THE SUBSTRATE IS TAKEN DIRECTLY, NEVER THROUGH THE HUB. The hub pins this repository, so a
+    # hub input here closes a cycle in the oracle graph (ADR-0037: there are no cycles; the hub is no
+    # gen library's input except gen-demo and demos/examples). The four members the root flake
+    # declares, with its `follows`, plus `gen-program`, which only the `examples/fleet` fixture needs.
+    # The entry-path agreement cell that once needed the hub is the hub's own property and lives in
+    # its ci as `hub-entry-agreement` (den-hoag-mxbv4).
+    gen-prelude.url = "github:sini/gen-prelude";
+    gen-graph.url = "github:sini/gen-graph";
+    gen-graph.inputs.gen-prelude.follows = "gen-prelude";
+    gen-select.url = "github:sini/gen-select";
+    gen-scope.url = "github:sini/gen-scope";
+    gen-scope.inputs.gen-prelude.follows = "gen-prelude";
+    gen-scope.inputs.gen-graph.follows = "gen-graph";
+    gen-program.url = "github:sini/gen-program";
+    gen-program.inputs.gen-prelude.follows = "gen-prelude";
+    gen-program.inputs.gen-scope.follows = "gen-scope";
   };
 
   outputs =
     inputs@{
       gen-harness,
-      gen,
       ...
     }:
     let
-      # ENTRY PATH 1 — the L1 standalone root, which is what a non-flake consumer reaches.
-      hubStandalone = import gen { };
-      # ENTRY PATH 2 — the published two-stage flake surface, which is what a flake consumer reaches.
-      hubFlake = gen.lib.mkGenLibs { };
-
-      mkLib =
-        hub:
-        import ../lib {
-          inherit (hub)
-            prelude
-            graph
-            select
-            scope
-            ;
-        };
-
-      genInspect = mkLib hubStandalone;
-      genInspectViaFlake = mkLib hubFlake;
+      prelude = inputs.gen-prelude.lib;
+      graph = inputs.gen-graph.lib;
+      select = inputs.gen-select.lib;
+      scope = inputs.gen-scope.lib;
+      genInspect = import ../lib {
+        inherit
+          prelude
+          graph
+          select
+          scope
+          ;
+      };
+      # The application the hub's `lib/hubSubstrate.nix` performs for `program`.
+      genProgram = inputs.gen-program.lib { inherit prelude scope; };
 
       mkFleet =
         genInspect': silenced:
         import ../examples/fleet {
           genInspect = genInspect';
-          genProgram = hubStandalone.program;
-          inherit silenced;
+          inherit genProgram silenced;
         };
     in
     gen-harness.lib.mkCi {
@@ -78,17 +58,10 @@
       name = "gen-inspect";
       testModules = ./tests;
       specialArgs = {
-        inherit
-          genInspect
-          genInspectViaFlake
-          hubStandalone
-          hubFlake
-          mkFleet
-          ;
-        genGraph = hubStandalone.graph;
-        genSelect = hubStandalone.select;
-        genProgram = hubStandalone.program;
-        genPrelude = hubStandalone.prelude;
+        inherit genInspect genProgram mkFleet;
+        genGraph = graph;
+        genSelect = select;
+        genPrelude = prelude;
         # The two arms of the example fleet, built once and shared. `admitted` is the whole subject;
         # `withdrawn` asserts the control atom and loses the policy's conclusion.
         admitted = mkFleet genInspect false;

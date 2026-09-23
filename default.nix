@@ -21,12 +21,10 @@ let
   lock = builtins.fromJSON (builtins.readFile ./flake.lock);
   # A direct edge IS the node key; a `follows` value is a PATH resolved segment by segment from this
   # lock's own root. Never by indexing `lock.nodes.<label>` — a last-segment shortcut reads a
-  # different node wherever a lock aliases a key. IT TAKES ITS LOCK AS AN ARGUMENT so that the entry
-  # cell can drive this exact binding on a fixture where the two rules disagree by construction; a
+  # different node wherever a lock aliases a key. IT TAKES ITS LOCK AS AN ARGUMENT so that a cell
+  # can drive this exact binding on a fixture where the two rules disagree by construction; a
   # resolver closed over this library's own lock could only ever be compared against a second copy
-  # of itself. This is the ONE declaration of the rule in this repository — `ci/tests/entry.nix`
-  # reads this binding through the record the body hands `wire`, instead of transcribing the fold a
-  # second time.
+  # of itself. This is the ONE declaration of the rule in this repository.
   resolve =
     lock:
     let

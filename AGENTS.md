@@ -103,16 +103,17 @@ disagree has added a cell nix-unit is not running.
 ★ **Both nix-unit planes.** `./ci#tests` alone silently omits every by-name refusal cell, which reads
 as a clean green.
 
-★★ **`ci/flake.lock` PINS gen-harness AT THE REVISION THE WHOLE ROSTER PINS** (`d56dece7`), and the
-alignment is load-bearing rather than incidental. The hub's `pin-coherence` check uses gen-harness as
-its LIVE POSITIVE CONTROL — "pinned by every member and at one revision" — and gates on that control,
-not on the coherence reading itself, which ships observe-only. A newer gen-harness here therefore
-turns the hub's own control incoherent and reds the hub, which is how this pin was chosen. Measured
-cost, and it is silent: the newer `25f0840e` carries a shared `ci-plane-coverage` check that
-`d56dece7` predates, so this repository's check list is four names —
-`agents-md-citations`, `default`, `mdformat-plugins`, `treefmt-tree-root` — and `ci flake check`
-exits 0 with that check simply ABSENT, no error and no warning. It returns when the roster moves
-together.
+★★ **`ci/flake.lock` PINS gen-harness AT THE REVISION THE WHOLE ROSTER PINS**, and the alignment is
+load-bearing rather than incidental. The hub's `pin-coherence` check uses gen-harness as its LIVE
+POSITIVE CONTROL — "pinned by every member and at one revision" — and gates on that control, not on
+the coherence reading itself, which ships observe-only. A gen-harness here that the roster does not
+share turns the hub's own control incoherent and reds the hub. The check list is whatever that
+revision's `mkCi` ships; read it with `nix eval ./ci#checks.x86_64-linux --apply builtins.attrNames`
+rather than from this file.
+
+★ **`ci/` declares no hub input.** The hub pins this repository, so a `github:sini/gen` input here is
+an oracle-graph cycle (ADR-0037). The entry-path agreement cell is the hub's own, `hub-entry-agreement`
+in the hub's ci.
 
 ## What this library is NOT
 
