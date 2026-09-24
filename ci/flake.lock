@@ -72,11 +72,11 @@
     },
     "gen-algebra": {
       "locked": {
-        "lastModified": 1790183834,
-        "narHash": "sha256-3dscvK5uTKBYtCLJzpGL+nny0KqT7CgsJiQ11PFuycs=",
+        "lastModified": 1790224135,
+        "narHash": "sha256-oRMV/eAhP1ycGvzK6LTQ+6SoAC55IJ3wniWz6pCbRog=",
         "owner": "sini",
         "repo": "gen-algebra",
-        "rev": "d83b8a621e2b3597f4d132f61884a9d593ad235e",
+        "rev": "72e7141aa3a84f8b1c463254164ccc08233078ba",
         "type": "github"
       },
       "original": {
@@ -92,11 +92,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790209786,
-        "narHash": "sha256-bs6KF+JLBFwmG90i+h9CBautXNoij03UcS48mVTpHGA=",
+        "lastModified": 1790224153,
+        "narHash": "sha256-ydTFHkctR73Ye669tVLKN9wTFD7JQGIawVIiBJsnMOw=",
         "owner": "sini",
         "repo": "gen-graph",
-        "rev": "cfc2a90d7b2a80bc73bb131748763638493c762c",
+        "rev": "00fe4bf4e9b5216498d0a6c5b0db22171723ec47",
         "type": "github"
       },
       "original": {
@@ -132,11 +132,11 @@
     },
     "gen-identity": {
       "locked": {
-        "lastModified": 1790183803,
-        "narHash": "sha256-Z97VxwPp3tpdPYr97pUypav7XC6MypjmDANAyplDiRY=",
+        "lastModified": 1790224101,
+        "narHash": "sha256-z8soFl0ElC9B8uqVpCT16IH4OCaex9AViBF+bereikM=",
         "owner": "sini",
         "repo": "gen-identity",
-        "rev": "fb0c3f4ce62620c1deb4e0f15d92eae6d96faf81",
+        "rev": "d9575178ceedcd145b7bddea65f899e377ffddcc",
         "type": "github"
       },
       "original": {
@@ -147,11 +147,11 @@
     },
     "gen-prelude": {
       "locked": {
-        "lastModified": 1790183816,
-        "narHash": "sha256-01QjQNph1+7MSUpYK4D/UeJE/Mv8fOEklfs4Wec+ILU=",
+        "lastModified": 1790224117,
+        "narHash": "sha256-QgUl/3dRfZsmc8Vn8wkAreDTbKFckssc9cgwROrhEFQ=",
         "owner": "sini",
         "repo": "gen-prelude",
-        "rev": "55851c81448209c3e2df3368cd153da2f01a039f",
+        "rev": "fee323a0966f6256910fd9045a48d5ac5758fdd8",
         "type": "github"
       },
       "original": {
@@ -170,11 +170,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790210412,
-        "narHash": "sha256-3wyjoJB/jk/K8wpUTlx7GMjyYnXDSt7326P2o/ybAuo=",
+        "lastModified": 1790224260,
+        "narHash": "sha256-Yk9mguXDJiPn3nm8HKdijsf38QUdaoC1hH/JsoTmK7c=",
         "owner": "sini",
         "repo": "gen-program",
-        "rev": "4a13ce7b4777f34a6e2d927702e784cb03728dbe",
+        "rev": "a77c113219443ad654cfb4008002857e774c6584",
         "type": "github"
       },
       "original": {
@@ -194,11 +194,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790210383,
-        "narHash": "sha256-WQDVmjQL6vBVDNayDLryUfs9W1j24lLqfHlGyQaa6Ag=",
+        "lastModified": 1790224208,
+        "narHash": "sha256-C+pmDcjagToOxtYkCYqB16LM1z0LWU/rXiPb2zXIMf8=",
         "owner": "sini",
         "repo": "gen-scope",
-        "rev": "90bca9658ef1d7175d401cd3a130bfe6e685703d",
+        "rev": "3d487e3e895050e6fae7c6c962526c43c90b6844",
         "type": "github"
       },
       "original": {
@@ -212,11 +212,11 @@
         "gen-algebra": "gen-algebra"
       },
       "locked": {
-        "lastModified": 1790210474,
-        "narHash": "sha256-Kgpqp9JvDsWm+SXr9a2Jj5+vcpdTRJvumfESu0dTNSg=",
+        "lastModified": 1790224375,
+        "narHash": "sha256-PQi1X7DnZxklKqV/2dDkTGtEJ0o154mgVOqgFYHXIWU=",
         "owner": "sini",
         "repo": "gen-select",
-        "rev": "d5a21ca12ac2e7dcfef012f539c2c2387665d295",
+        "rev": "588d6c08b40a076b0e16bfa8ca4881ef450fed64",
         "type": "github"
       },
       "original": {
@@ -338,11 +338,11 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1790046670,
-        "narHash": "sha256-OJe62m8gZx4xEAQnMcqH1u31/uu4Xf0q2ykAEHZfgrg=",
-        "rev": "6774f7bc253789b113a4f39285dc0fa100abeacc",
+        "lastModified": 1790185690,
+        "narHash": "sha256-EZwz6sR6RLzbKiJJ9QQgXPZ/zA6P8ecfFr/6fwBRfes=",
+        "rev": "4975466d324710c576dc11ad614684e6bd8cad8e",
         "type": "tarball",
-        "url": "https://releases.nixos.org/nixos/unstable/nixos-26.11pre1077996.6774f7bc2537/nixexprs.tar.xz"
+        "url": "https://releases.nixos.org/nixos/unstable/nixos-26.11pre1078696.4975466d3247/nixexprs.tar.xz"
       },
       "original": {
         "type": "tarball",
