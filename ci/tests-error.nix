@@ -144,6 +144,28 @@ in
       expectedError.msg = exactly "gen-inspect: model-true atom(s) with no IR edge: housed:bourdon:campanile";
     };
 
+    # ── DOOR 8: ★ A QUALIFIER NO FROM/JOIN ITEM DECLARES ──
+    # The executor resolves a qualifier it does not know to the UNQUALIFIED row, so without this door
+    # `x.name` below projected the JOINED table's `name` at exit 0 — a wrong answer, not an empty one.
+    # The known set is each item's correlation name: its alias, else its table name.
+    test-an-unknown-qualifier-is-refused-with-the-declared-qualifiers = {
+      expr = q "SELECT x.name FROM tocsin t JOIN belfry b ON t.belfry = b.name";
+      expectedError.msg = exactly "gen-inspect: unknown qualifier 'x'; known: t, b";
+    };
+
+    # An ALIASED table's own name is not a qualifier: the alias replaces it, as SQL's range-variable
+    # rule says. Refused rather than resolved, so `tocsin` cannot mean two rows in a self-join.
+    test-an-aliased-tables-own-name-is-not-a-qualifier = {
+      expr = q "SELECT tocsin.name FROM tocsin t JOIN belfry b ON t.belfry = b.name";
+      expectedError.msg = exactly "gen-inspect: unknown qualifier 'tocsin'; known: t, b";
+    };
+
+    # Two items with one correlation name make every reference to it ambiguous.
+    test-a-duplicate-qualifier-is-refused-by-name = {
+      expr = q "SELECT tocsin.name FROM tocsin JOIN tocsin ON tocsin.belfry = tocsin.name";
+      expectedError.msg = exactly "gen-inspect: duplicate qualifier 'tocsin'; give each FROM/JOIN item a distinct alias";
+    };
+
     # ── DOOR 7: mkInspector refuses a non-scope, NAMING THE MISSING FIELDS ──
     # The gen-graph case goes through an explicit wrapper rather than a shape probe, so everything
     # that is neither reaches this refusal.

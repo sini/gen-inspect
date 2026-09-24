@@ -63,7 +63,10 @@ let
   materialize = import ./materialize.nix { inherit lib graph; };
   selecting = import ./select.nix { inherit lib graph; };
   compile = import ./compile.nix { inherit lib; };
-  door = import ./door.nix { inherit lib compile; };
+  door = import ./door.nix {
+    inherit lib compile;
+    inherit (executor) qualifierOf;
+  };
   render = import ./render.nix { inherit lib; };
   inspector = import ./inspector.nix {
     inherit

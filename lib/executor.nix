@@ -10,7 +10,7 @@
 # selector to compile to and this fold is where they go. `WHERE` still compiles to gen-select, in
 # `astToSelector` below, which is the second route and is unchanged from the origin.
 #
-# TWO CHANGES AGAINST THE ORIGIN, BOTH NAMED.
+# THREE CHANGES AGAINST THE ORIGIN, EACH NAMED.
 #
 # (1) ★ THE KIND-ALIAS TABLE IS STRIPPED TO THE IDENTITY. The origin carried 23 entries mapping
 #     plural SQL table names to singular fleet kinds, and those entries sit AT KIND POSITION:
@@ -22,6 +22,12 @@
 #     re-enter, and deleting it would move that decision to 4 call sites.
 #
 # (2) `import ./sql.nix` resolves to this library's copied parser, a sibling in `lib/`.
+#
+# (3) ★ A TABLE WITH NO DECLARED ALIAS IS QUALIFIED BY ITS OWN NAME (`qualifierOf`). The origin
+#     populated the alias map from an explicit alias only, so `FROM tocsin JOIN belfry ON
+#     tocsin.belfry = belfry.name` resolved both qualifiers to the unqualified fallback and answered
+#     `[ ]` at exit 0. SQL's range-variable rule: a FROM item's correlation name is its alias if one is
+#     given, else the table name. An unknown or duplicated qualifier is refused in `./door.nix`.
 #
 # `lib` here is gen-prelude extended by `./extras.nix`, not nixpkgs `lib`; see that file's header.
 # The three nixpkgs names the origin used that the prelude does not publish —
@@ -39,6 +45,9 @@ let
   # kind name: the IR's `tables` are keyed by the register's own kinds, and `ir.kinds` is what a
   # `WHERE kind = '…'` resolves against.
   resolveKind = name: name;
+
+  # The correlation name of a FROM or JOIN item: its alias if declared, else its table name.
+  qualifierOf = item: if item.alias != null then item.alias else item.kind;
 
   # Get rows from fleet: { name → row } with name injected
   getRows =
@@ -231,6 +240,7 @@ let
     let
       joinKind = resolveKind join.kind;
       joinRows = getRows fleet joinKind;
+      joinAlias = qualifierOf join;
 
       # The ON condition tells us which field on the join table matches which field on the left
       # e.g., ON svc.server = s.name means: joinRow.server == leftRow.name
@@ -238,20 +248,16 @@ let
         leftRow: leftAlias:
         let
           # Build alias map for value resolution
-          rowAliases =
-            leftAlias
-            // lib.optionalAttrs (join.alias != null) {
-              ${join.alias} = leftRow; # placeholder, will be replaced per join row
-            };
+          rowAliases = leftAlias // {
+            ${joinAlias} = leftRow; # placeholder, will be replaced per join row
+          };
 
           matching = lib.filterAttrs (
             _: joinRow:
             let
-              fullAliases =
-                rowAliases
-                // lib.optionalAttrs (join.alias != null) {
-                  ${join.alias} = joinRow;
-                };
+              fullAliases = rowAliases // {
+                ${joinAlias} = joinRow;
+              };
               lv = resolveValue fullAliases leftRow join.on.left;
               rv = resolveValue fullAliases leftRow join.on.right;
             in
@@ -264,11 +270,9 @@ let
             [
               {
                 row = leftRow;
-                aliases =
-                  rowAliases
-                  // lib.optionalAttrs (join.alias != null) {
-                    ${join.alias} = { };
-                  };
+                aliases = rowAliases // {
+                  ${joinAlias} = { };
+                };
               }
             ]
           else
@@ -276,11 +280,9 @@ let
         else
           lib.mapAttrsToList (_: joinRow: {
             row = leftRow // joinRow;
-            aliases =
-              rowAliases
-              // lib.optionalAttrs (join.alias != null) {
-                ${join.alias} = joinRow;
-              };
+            aliases = rowAliases // {
+              ${joinAlias} = joinRow;
+            };
           }) matching;
     in
     builtins.concatMap (item: matchRows item.row item.aliases) leftRows;
@@ -331,12 +333,14 @@ let
       # FROM clause
       fromKind = resolveKind ast.from.kind;
       fromRows = getRows fleet fromKind;
-      fromAlias = ast.from.alias;
+      fromAlias = qualifierOf ast.from;
 
       # Build initial row set with alias tracking
       initialRows = lib.mapAttrsToList (_: row: {
         inherit row;
-        aliases = lib.optionalAttrs (fromAlias != null) { ${fromAlias} = row; };
+        aliases = {
+          ${fromAlias} = row;
+        };
       }) fromRows;
 
       # Apply JOINs sequentially
@@ -380,6 +384,7 @@ in
     astToSelector
     mkRowContext
     resolveKind
+    qualifierOf
     getRows
     getField
     ;

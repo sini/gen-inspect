@@ -44,7 +44,8 @@ so an APPLIED output here would abort every hub evaluation with `attempt to call
   `675d9f3`, each with an origin header naming the source md5 and the whole diff. An example is not
   published surface and a second root input to reach one is what ADR-0037 forbids.
 - **`compile.nix`** — the three-route rule, and the reserved-construct door this gate refuses at.
-- **`door.nix`** — unknown table, unknown column, unknown label value, unknown kind value.
+- **`door.nix`** — unknown table, unknown column, unknown label value, unknown kind value, unknown
+  or duplicate qualifier (a FROM/JOIN item's qualifier is its alias, else its table name).
 - **`select.nix`** — IR + selector → IR′, carrying origins forward.
 - **`render.nix`** — mermaid, dot, JSON. Reads the IR, never the scope.
 - **`inspector.nix`** — `mkInspector scope → { facts, select, query, parse, render }`.
@@ -139,11 +140,3 @@ in the hub's ci.
   under an origin header.
 
 <!-- gen-citations:end -->
-
-## A known limitation, inherited from the copy
-
-A `JOIN` whose ON condition qualifies columns with **table names rather than explicit aliases**
-answers `[ ]` at exit 0 rather than refusing: the copied executor populates its alias map only from
-an explicit alias. Write `FROM tocsin t JOIN belfry b ON t.belfry = b.name`. This is origin behaviour
-carried by the copy, recorded rather than repaired — a repair to a copied artefact's semantics is its
-own change.

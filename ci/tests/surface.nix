@@ -77,16 +77,19 @@ in
 
     # ── THE EXECUTOR ROUTE. Each of these is a construct gen-select cannot express. ──
     #
-    # ★ THE JOIN IS WRITTEN WITH ALIASES, AND THAT IS A CONSTRAINT INHERITED FROM THE COPY, NOT A
-    # PREFERENCE. The copied executor resolves a qualified reference through an alias map that is
-    # populated ONLY from an explicit alias, so `FROM tocsin JOIN belfry ON tocsin.belfry =
-    # belfry.name` — the same join with the table names themselves as qualifiers — answers `[ ]` at
-    # exit 0 rather than refusing. Measured at this build, both arms in one run: the aliased form
-    # below returns two rows, the unaliased form returns none. It is reported as a finding against
-    # the copy rather than repaired here, because repairing a copied artefact's semantics is outside
-    # what this landing transcribes.
     test-control-a-join-is-not-refused-it-routes-to-the-executor = {
       expr = q "SELECT t.name FROM tocsin t JOIN belfry b ON t.belfry = b.name WHERE t.weight = 'heavy'";
+      expected = [
+        { name = "angelus"; }
+        { name = "bourdon"; }
+      ];
+    };
+
+    # ★ THE SAME JOIN QUALIFIED BY TABLE NAME ANSWERS THE SAME ROWS. The copied executor's alias map
+    # took an explicit alias only, so this form resolved both qualifiers to the unqualified fallback
+    # and answered `[ ]` at exit 0. A table with no alias is now qualified by its own name.
+    test-a-join-qualified-by-table-name-answers-as-the-aliased-form = {
+      expr = q "SELECT tocsin.name FROM tocsin JOIN belfry ON tocsin.belfry = belfry.name WHERE tocsin.weight = 'heavy'";
       expected = [
         { name = "angelus"; }
         { name = "bourdon"; }

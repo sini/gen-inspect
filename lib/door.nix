@@ -11,7 +11,11 @@
 # ★ `deepSeq`, NOT `seq`. `builtins.seq` over the checked-name list forces the list to WHNF and not
 # one element, so a door built on it reads exit 0 on EVERY bad shape — a refusal that refuses
 # nothing looks exactly like a working one.
-{ lib, compile }:
+{
+  lib,
+  compile,
+  qualifierOf,
+}:
 let
   known = set: builtins.concatStringsSep ", " (builtins.attrNames set);
 
@@ -120,6 +124,44 @@ let
           [ ]
       );
 
+  # ── THE QUALIFIER DOOR ──
+  # ★ A QUALIFIER THE EXECUTOR CANNOT RESOLVE FALLS BACK TO THE UNQUALIFIED ROW, which is a silent
+  #   wrong answer rather than a refusal — measured on the origin: `FROM tocsin JOIN belfry ON
+  #   tocsin.belfry = belfry.name` answered `[ ]` at exit 0. The known set is each FROM/JOIN item's
+  #   correlation name (`qualifierOf`: its alias, else its table name). Two items with one name make
+  #   every reference to it ambiguous, so a duplicate is refused before any reference is resolved.
+  refOf = r: lib.optional (builtins.isAttrs r && r ? table && r.table != null) r.table;
+
+  whereQualifiers =
+    expr:
+    if expr == null || !(builtins.isAttrs expr) || !(expr ? op) then
+      [ ]
+    else if expr.op == "AND" || expr.op == "OR" then
+      whereQualifiers expr.left ++ whereQualifiers expr.right
+    else
+      refOf (expr.left or null) ++ refOf (expr.right or null);
+
+  checkQualifiers =
+    ast:
+    let
+      declared = map qualifierOf ([ ast.from ] ++ (ast.joins or [ ]));
+      dups = lib.unique (
+        builtins.filter (n: builtins.length (builtins.filter (m: m == n) declared) > 1) declared
+      );
+      used =
+        builtins.concatMap refOf (ast.select or [ ])
+        ++ builtins.concatMap (j: refOf j.on.left ++ refOf j.on.right) (ast.joins or [ ])
+        ++ whereQualifiers (ast.where or null)
+        ++ refOf (ast.orderBy or null);
+      unknown = builtins.filter (q: !(builtins.elem q declared)) used;
+    in
+    if dups != [ ] then
+      throw "gen-inspect: duplicate qualifier '${builtins.head dups}'; give each FROM/JOIN item a distinct alias"
+    else if unknown != [ ] then
+      throw "gen-inspect: unknown qualifier '${builtins.head unknown}'; known: ${builtins.concatStringsSep ", " declared}"
+    else
+      declared;
+
   # THE ONE ENTRY. It returns the AST so the pipeline reads `parse → door → compile → executor`.
   #
   # ★ THE THREE CHECKS ARE FORCED IN ORDER, NOT AS ONE ATTRSET. Nix does not order an attrset's
@@ -145,11 +187,14 @@ let
         ++ map (c: checkColumn ir present c) (whereColumns (ast.where or null))
         ++ lib.optional (ast.orderBy or null != null) (checkColumn ir present ast.orderBy.column);
       values = checkWhere ir (ast.where or null);
+      qualifiers = checkQualifiers ast;
     in
     if builtins.any compile.isReserved tableNames then
       ast
     else
-      builtins.deepSeq tables (builtins.deepSeq columns (builtins.deepSeq values ast));
+      builtins.deepSeq tables (
+        builtins.deepSeq columns (builtins.deepSeq values (builtins.deepSeq qualifiers ast))
+      );
 in
 {
   inherit
