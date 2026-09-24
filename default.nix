@@ -58,6 +58,16 @@ in
   graph ? inputs.gen-graph or (dep [ "gen-graph" ]),
   select ? inputs.gen-select or (dep [ "gen-select" ]),
   scope ? inputs.gen-scope or (dep [ "gen-scope" ]),
+  # ★ A MEMBER THAT DEPENDS ON AN UNAPPLIED MEMBER TAKES IT APPLIED, AND ITS DEFAULT NAMES ITS
+  # SIBLING FORMALS. gen-program's root is unapplied: it takes `prelude` and `scope`. `dep` would be
+  # `import (src [ "gen-program" ]) { }`, which fetches gen-program's OWN locked gen-scope and puts a
+  # second substrate instance in one evaluation. A formal's default may name a sibling formal, so the
+  # default applies gen-program to THIS root's `prelude` and `scope` instead. This is the pattern for
+  # every member whose dependency is an unapplied member.
+  #
+  # The standalone path builds its own instance here, so a standalone evaluation that also reaches
+  # the hub's roster holds TWO gen-program instances. The flake path through the hub holds one.
+  program ? inputs.gen-program or (import (src [ "gen-program" ]) { inherit prelude scope; }),
 }:
 # THE BODY IS EAGER, AND THAT IS WHAT MAKES THE ENTRY CELL TOTAL RATHER THAN PARTIAL. `forced` forces
 # every wired dependency to WHNF before `./lib` sees it, so a default that cannot resolve is loud AT
@@ -74,6 +84,7 @@ let
       graph
       select
       scope
+      program
       ;
   };
   forced = builtins.deepSeq (builtins.mapAttrs (_: builtins.typeOf) deps) null;

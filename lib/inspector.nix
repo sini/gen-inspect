@@ -36,14 +36,18 @@ let
       inherit facts;
 
       # THE TEXT ENTRY. `door` before `compile` is the design's order and it is load-bearing: the
-      # door refuses an unknown name off the IR's own known sets, and defers a name this gate
-      # reserves so `compile` can refuse it as a CONSTRUCT rather than as a typo.
+      # door refuses an unknown name off the IR's own known sets, and defers a reserved name so
+      # `compile` can refuse it as a CONSTRUCT rather than as a typo. `compile` hands the executor
+      # the IR's tables plus the program route's relations, and the AST pointed at them.
       query =
         text:
         let
-          ast = sql.parseSql text;
+          routed = compile.compile facts (door.check facts (sql.parseSql text));
         in
-        executor.evalQuery facts.tables (compile.compile (door.check facts ast));
+        executor.evalQuery routed.tables routed.ast;
+
+      # THE DERIVATION OF ONE ATOM: an IR key's `origin`, or a `reaches` atom's one-step witnesses.
+      why = compile.why facts;
 
       # THE PROGRAMMATIC ENTRY — the same path with no text stage, and therefore no door: a selector
       # is a VALUE built from gen-select's constructors, so there is no name to mistype and nothing

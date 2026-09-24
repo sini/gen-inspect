@@ -37,6 +37,7 @@
           select
           scope
           ;
+        inherit (hub) program;
       };
 
       fleet = import ./default.nix {

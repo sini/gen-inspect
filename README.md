@@ -12,6 +12,7 @@ genInspect = import gen-inspect/lib {
   graph = gen.graph;
   select = gen.select;
   scope = gen.scope;
+  program = gen.program;   # gen-program, APPLIED
 };
 
 i = genInspect.mkInspector {
@@ -24,6 +25,7 @@ i = genInspect.mkInspector {
 i.facts                    # the IR
 i.query "SELECT …"         # the text surface
 i.select selector          # the programmatic surface; the result is an IR
+i.why "rings:hemony:bourdon"  # one atom's derivation: an edge's origin, or a reaches row's witnesses
 i.render.mermaid i.facts   # the picture's source
 ```
 
@@ -86,12 +88,53 @@ nothing here computes with them algebraically.
 | --------------------------------------- | -------------------------- |
 | `WHERE` predicate                       | **gen-select**             |
 | `JOIN`, projection, `ORDER BY`, `LIMIT` | **gen-inspect's own fold** |
-| reachability, transitive closure, `WHY` | **the program layer**      |
+| `reaches`, `why`                        | **the program layer**      |
+| `paths` / `path` (path enumeration)     | **refused, permanently**   |
 
 The selector layer is the **guard sublanguage**, not "the non-recursive fragment". Measured:
 gen-select's constructors yield exactly nine tags, and `sel ? join`, `sel ? comprehension` and
 `sel ? fix` are all false. So a `JOIN` has no selector to compile to and routes to the fold — **a
-`JOIN` is not refused**. The third route is a **refusal door by name**, not a stub.
+`JOIN` is not refused**.
+
+## Reachability and `why`
+
+**`reaches` is a table** with columns `src`, `dst`, `via` and `why`. A row says `dst` is reachable from
+`src` along edges labelled `via`, reflexively and transitively; `via = '*'` means any label.
+
+```console
+$ nix eval --json .#inspect --apply 'i: i.query "SELECT dst FROM reaches WHERE src = '\''hemony'\'' AND via = '\''*'\'' ORDER BY dst"'
+[{"dst":"bourdon"},{"dst":"campanile"},{"dst":"chiming"},{"dst":"full-circle"},{"dst":"hemony"}]
+```
+
+**The engine computes it and the relational fold consumes it.** Each constrained `(via, src)` becomes
+a gen-program declaration set over the IR's edges (one fact per edge, a base fact
+`reaches:via:s:s`, and one rule per edge extending a reach by that edge), solved by gen-scope's
+engine; this library computes no fixpoint of its own. The program has no negative literal, so it is
+a Horn program, and its well-founded model is its least model (Van Gelder, Ross & Schlipf 1991,
+Theorem 3.7): the reflexive-transitive closure, total. The relation is handed to the executor as a
+table, so `WHERE`, `JOIN`, projection, `ORDER BY` and `LIMIT` serve it unchanged — relational
+algebra plus fixed points, with the fixed point in the engine. A `reaches` row is a query relation
+and never an IR edge.
+
+**Equalities on `src` and `via` prune; they never change the answer.** Only top-level `AND`
+equalities are read, each `reaches` occurrence is grounded by its own constraints (a self-join is
+two relations), and an unqualified `src` or `via` is read as a `reaches` constraint only when no other
+table in the query has that column. The whole `WHERE` still runs over the result.
+
+**The relata are the node ids plus every edge endpoint.** An edge may end at a name no register
+entry declares; the graph walk follows it, and so does `reaches`.
+
+**`why` is one step.** On `edge` it is the IR's `origin`. On `reaches` it lists every rule of the
+query program whose body is true in the model — the same body-checked construction an edge's origin
+uses. Every edge atom a witness names is an IR key, so a reader chains `why` from a reachability row
+to the edge to the policy rule that derived it. **Some one-step witnesses are circular**: on a cycle
+`treble ⇄ second`, `reaches:changes:treble:treble` has two derivations, the base fact and one through
+`second` that leads back to itself. Each is a rule whose body is true, but together they are not a
+well-founded proof tree, and choosing one needs stage information the engine does not publish. So
+`why` never unfolds, and a reader unfolding by hand stops at a repeated atom.
+
+**Path enumeration is refused, and not by a gate.** On a cyclic graph the set of paths is infinite,
+and a fixed point is only defined over a finite lattice.
 
 ## The example
 
@@ -171,7 +214,7 @@ state, and `stroke-dasharray` discriminates not at all. What CI asserts is the *
 
 ```console
 $ nix eval .#inspect --apply 'i: i.query "SELECT name FROM anvils"'
-error: gen-inspect: unknown name 'anvils'; known: belfry, chime, edge, peal, ringer, tocsin
+error: gen-inspect: unknown name 'anvils'; known: belfry, chime, edge, peal, reaches, ringer, tocsin
 
 $ … "SELECT name FROM tocsin WHERE wieght = 'heavy'"
 error: gen-inspect: unknown name 'wieght'; known: belfry, kind, name, weight
@@ -179,26 +222,35 @@ error: gen-inspect: unknown name 'wieght'; known: belfry, kind, name, weight
 $ … "SELECT src FROM edge WHERE label = 'anvils'"
 error: gen-inspect: unknown label 'anvils'; known: absorbs, admits, enrolled, housed, hung, rings
 
-$ … "SELECT src FROM reaches"
-error: gen-inspect: unsupported construct 'reaches' (reachability); it compiles onto the program
-layer, which this gate does not build.
+$ … "SELECT dst FROM reaches WHERE src = 'hemony' AND via = 'anvils'"
+error: gen-inspect: unknown via 'anvils'; known: absorbs, admits, enrolled, housed, hung, rings, *
+
+$ … "SELECT dst FROM paths WHERE src = 'hemony'"
+error: gen-inspect: unsupported construct 'paths' (path enumeration); a cyclic graph has infinitely
+many paths, so no finite answer exists and no gate adds one. Ask `reaches` for what a path reaches
+and `why` for the edge that carries it.
 ```
 
-The third one is the sharp case: `WHERE label = 'anvils'` is a **well-formed query over a known
-column**, so without its door it returns `[]` at exit 0 and reads as *"the policy produced nothing"*.
+The label and via doors are the sharp cases: each is a **well-formed query over a known column**.
+Without its door, `WHERE label = 'anvils'` returns `[]` at exit 0 and reads as *"the policy produced
+nothing"*, and `via = 'anvils'` answers `hemony` alone, reading as *"hemony reaches nothing"*.
 
 ## Dependencies, and what is not one
 
-Four gen libraries, all **injected as values** — only plain data crosses a gen↔gen boundary.
-`gen-prelude`, `gen-graph` and `gen-select` are what this gate evaluates through; `gen-scope` is the
-program route's evaluator, declared now so that route's landing changes no caller.
+Five gen libraries, all **injected as values** — only plain data crosses a gen↔gen boundary.
+`gen-prelude`, `gen-graph` and `gen-select` serve the selector and executor routes; `gen-scope` and
+`gen-program` serve the program route.
 
-The design names a fifth, `gen-program`, and it is **absent by measurement**. The hub injects a
-framework member's substrate through a function of its `members` binding — exactly the eighteen roster
-entries whose `.lib` is published applied — and `program` is one of the three unapplied members that
-the substrate fold itself produces, so it is not in scope where a fourth substrate entry is written.
-Declaring it here would pin a dependency the hub has no way to inject. Gate 2 adds it in the commit
-that replaces `compile`'s body.
+**`program` is gen-program applied, and its standalone default is built from this library's own
+`prelude` and `scope`.** gen-program's root is itself unapplied. Resolving it the way the other four
+resolve (`import <pin> { }`) would fetch gen-program's own locked gen-scope and put a second
+substrate in one evaluation, so the default in `default.nix` names its sibling formals instead:
+`program ? … (import (src [ "gen-program" ]) { inherit prelude scope; })`. A formal's default may
+name a sibling formal. **This is the pattern for any library that depends on an unapplied library.**
+
+**The standalone path holds two gen-program instances; the hub's flake path holds one.** Through
+the hub, gen-inspect receives the hub's applied `program`. Through `import <gen-inspect> { }`, the
+default above builds its own, so an evaluation that also reaches the hub's roster carries two.
 
 **nixpkgs is not a dependency.** The SQL parser and executor are copied from
 `gen-scope/examples/sql-schema`, which took nixpkgs `lib` — twelve distinct `lib.*` names, six of

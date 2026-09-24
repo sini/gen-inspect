@@ -17,28 +17,27 @@
   qualifierOf,
 }:
 let
+  # `reaches` is a table the program route computes, so it is known without being in `ir.tables`.
+  tableSet = ir: ir.tables // { reaches = { }; };
   known = set: builtins.concatStringsSep ", " (builtins.attrNames set);
 
   # A table's columns are the union over its rows, because a row is an attrs splat and two rows of
   # one kind need not carry the same optional attributes. `name` and `kind` are injected by the IR's
-  # own projection and are therefore columns of every table.
-  columnsOf =
-    ir: table:
-    lib.unique (
-      builtins.concatMap (row: builtins.attrNames row) (builtins.attrValues ir.tables.${table})
-    );
+  # own projection and are therefore columns of every table. `reaches`'s are DECLARED (`./compile.nix`)
+  # and `edge` also carries `why`.
+  inherit (compile) columnsOf;
 
   checkTable =
     ir: name:
-    # A reserved construct is a KNOWN name this gate does not serve, not an unknown one. It is left
-    # for `compile` to refuse, naming the construct and the layer that owes it; refusing it here as
-    # "unknown" would tell a reader to check their spelling of a word that is spelled correctly.
+    # A reserved construct is a KNOWN name no route serves, not an unknown one. It is left for
+    # `compile` to refuse, naming the construct and the reason; refusing it here as "unknown" would
+    # tell a reader to check their spelling of a word that is spelled correctly.
     if compile.isReserved name then
       name
-    else if ir.tables ? ${name} then
+    else if tableSet ir ? ${name} then
       name
     else
-      throw "gen-inspect: unknown name '${name}'; known: ${known ir.tables}";
+      throw "gen-inspect: unknown name '${name}'; known: ${known (tableSet ir)}";
 
   # The column domain is the union over the FROM table and every joined table, because a join widens
   # the row: a column that exists only on the joined side is legitimate and must not be refused.
@@ -65,15 +64,25 @@ let
   #   value; strings are internal keys only". A SQL `WHERE kind = '…'` therefore never reaches
   #   `sel.kind`: the executor compiles `=` to `sel.when`, and this door resolves the string against
   #   `ir.kinds` first.
-  valueSets = ir: {
-    label = ir.labels;
-    kind = builtins.attrNames ir.kinds;
-  };
+  #
+  # ★ `via` AND, ON A QUERY OVER `reaches`, `src`. Without the `via` door `via = 'anvils'` grounds no
+  #   edge and answers the reflexive row alone at exit 0 — "hemony reaches nothing". `src` ranges over
+  #   the relata domain (node ids plus every edge endpoint); an edge's `src` is always in it, so the
+  #   door is sound for a joined `edge` too, and it is scoped to `reaches` queries because another
+  #   table may carry a `src` attribute of its own.
+  valueSets =
+    ir: tables:
+    {
+      label = ir.labels;
+      kind = builtins.attrNames ir.kinds;
+      via = compile.vias ir;
+    }
+    // lib.optionalAttrs (builtins.elem "reaches" tables) { src = compile.domain ir; };
 
   checkValue =
-    ir: col: value:
+    ir: tables: col: value:
     let
-      sets = valueSets ir;
+      sets = valueSets ir tables;
     in
     if !(sets ? ${col}) || !(builtins.isString value) || builtins.elem value sets.${col} then
       value
@@ -84,11 +93,11 @@ let
 
   # Walk the WHERE tree for equality-shaped comparisons against a value-doored column.
   checkWhere =
-    ir: expr:
+    ir: tables: expr:
     if expr == null || !(builtins.isAttrs expr) || !(expr ? op) then
       [ ]
     else if expr.op == "AND" || expr.op == "OR" then
-      checkWhere ir expr.left ++ checkWhere ir expr.right
+      checkWhere ir tables expr.left ++ checkWhere ir tables expr.right
     else if
       (expr.op == "=" || expr.op == "!=")
       && expr ? left
@@ -96,9 +105,9 @@ let
       && expr.left ? column
       && expr ? right
     then
-      [ (checkValue ir expr.left.column expr.right) ]
+      [ (checkValue ir tables expr.left.column expr.right) ]
     else if expr.op == "IN" && expr ? left && builtins.isAttrs expr.left && expr.left ? column then
-      map (v: checkValue ir expr.left.column v) (
+      map (v: checkValue ir tables expr.left.column v) (
         if builtins.isList expr.right then expr.right else [ expr.right ]
       )
     else
@@ -170,9 +179,9 @@ let
   #   exist either, reported the VALUE refusal on one run. Chaining `seq` makes the message a
   #   function of the query rather than of the evaluator: the widest name fails first.
   #
-  # ★ A RESERVED CONSTRUCT SHORT-CIRCUITS THE WHOLE DOOR. `FROM reaches` names a table this gate does
-  #   not serve, so its column domain is EMPTY and every projected column reads as unknown against an
-  #   empty known set — measured before this guard: `SELECT src FROM reaches` refused with
+  # ★ A RESERVED CONSTRUCT SHORT-CIRCUITS THE WHOLE DOOR. `FROM paths` names a table no route serves,
+  #   so its column domain is EMPTY and every projected column reads as unknown against an empty known
+  #   set — measured on the gate-1 form of this guard: `SELECT src FROM reaches` refused with
   #   "unknown name 'src'; known: ", which tells a reader to check the spelling of a correct column
   #   and never mentions the construct. The construct refusal is `compile`'s and it is the only one
   #   this query should see.
@@ -181,12 +190,12 @@ let
     let
       tableNames = [ ast.from.kind ] ++ map (j: j.kind) (ast.joins or [ ]);
       tables = map (checkTable ir) tableNames;
-      present = builtins.filter (t: ir.tables ? ${t}) tables;
+      present = builtins.filter (t: tableSet ir ? ${t}) tables;
       columns =
         map (c: checkColumn ir present c.column) (ast.select or [ ])
         ++ map (c: checkColumn ir present c) (whereColumns (ast.where or null))
         ++ lib.optional (ast.orderBy or null != null) (checkColumn ir present ast.orderBy.column);
-      values = checkWhere ir (ast.where or null);
+      values = checkWhere ir tables (ast.where or null);
       qualifiers = checkQualifiers ast;
     in
     if builtins.any compile.isReserved tableNames then

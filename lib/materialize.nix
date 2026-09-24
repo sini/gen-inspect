@@ -59,6 +59,45 @@ let
 
   keyOf = e: "${e.label}:${e.src}:${e.dst}";
 
+  # ── WITNESSES ARE BODY-CHECKED, NEVER HEAD-MATCHED ──
+  # Van Gelder, Ross & Schlipf 1991 Def 3.3: p is derived iff some rule has head p AND EVERY body
+  # literal is true in the model. A head match ALONE reports a rule whose body is false, which Def 3.1
+  # calls a witness of UNUSABILITY — an origin naming a rule that did not fire is nothing to look at,
+  # and "why is this edge here" is the whole component.
+  #
+  # ONE CONSTRUCTION FOR BOTH PROGRAMS: the subject's policy program (an edge's origin) and the query
+  # program `./compile.nix` builds for `reaches`. `keep` is the caller's rule filter; a fact's empty
+  # body fires vacuously, and whether a fact counts as a witness is the caller's judgement.
+  witnesses =
+    { rules, verdict }:
+    keep: atom:
+    let
+      firesUnder =
+        r:
+        builtins.all (a: verdict a == "true") (r.pos or [ ])
+        && builtins.all (a: verdict a == "false") (r.neg or [ ]);
+      firedTuple =
+        r:
+        map (a: {
+          atom = a;
+          verdict = verdict a;
+          sign = "pos";
+        }) (r.pos or [ ])
+        ++ map (a: {
+          atom = a;
+          verdict = verdict a;
+          sign = "neg";
+        }) (r.neg or [ ]);
+    in
+    map (r: {
+      rule = {
+        inherit (r) head;
+        pos = r.pos or [ ];
+        neg = r.neg or [ ];
+      };
+      fired = firedTuple r;
+    }) (builtins.filter (r: r.head == atom && keep r && firesUnder r) rules);
+
   materialize =
     subject:
     let
@@ -72,30 +111,13 @@ let
       prog = subject.program;
       mdl = subject.model;
 
-      # ── WITNESSES ARE BODY-CHECKED, NEVER HEAD-MATCHED ──
-      # Van Gelder, Ross & Schlipf 1991 Def 3.3: p is derived iff some rule has head p AND EVERY body
-      # literal is true in the model. A head match ALONE reports a rule whose body is false, which
-      # Def 3.1 calls a witness of UNUSABILITY — an origin naming a rule that did not fire is
-      # nothing to look at, and "why is this edge here" is the whole component.
+      # A policy program's FACT is a declaration and carries a declaration origin, so only a rule with
+      # a body is a policy witness. The filter sits HERE, at this call site, and not in `witnesses`.
       bodied = r: (r.pos or [ ]) != [ ] || (r.neg or [ ]) != [ ];
-      firesUnder =
-        r:
-        builtins.all (a: mdl.verdict a == "true") (r.pos or [ ])
-        && builtins.all (a: mdl.verdict a == "false") (r.neg or [ ]);
-      witnessesOf = atom: builtins.filter (r: r.head == atom && bodied r && firesUnder r) prog.rules;
-
-      firedTuple =
-        r:
-        map (a: {
-          atom = a;
-          verdict = mdl.verdict a;
-          sign = "pos";
-        }) (r.pos or [ ])
-        ++ map (a: {
-          atom = a;
-          verdict = mdl.verdict a;
-          sign = "neg";
-        }) (r.neg or [ ]);
+      witnessesOf = witnesses {
+        inherit (prog) rules;
+        inherit (mdl) verdict;
+      } bodied;
 
       # ★ `derivations` IS A LIST, with one entry at this gate. Recursion produces multiply-derived
       #   atoms BY CONSTRUCTION — that is what a fixpoint does — so an origin holding ONE rule would
@@ -110,17 +132,7 @@ let
         let
           ws = witnessesOf atom;
         in
-        if ws == [ ] then
-          throw "gen-inspect: no firing rule derives '${atom}'"
-        else
-          map (r: {
-            rule = {
-              inherit (r) head;
-              pos = r.pos or [ ];
-              neg = r.neg or [ ];
-            };
-            fired = firedTuple r;
-          }) ws;
+        if ws == [ ] then throw "gen-inspect: no firing rule derives '${atom}'" else ws;
 
       # ★★ DYNAMIC LABELS ARE DERIVED FROM THE PROGRAM, NEVER A LITERAL. A hand-kept list drops
       #    every derived edge whose label is not on it, WITH NO DIAGNOSTIC. In this fleet `enrolled`
@@ -282,6 +294,7 @@ in
     graphSubject
     atomEdge
     keyOf
+    witnesses
     ;
   fromGraph = args: materialize (graphSubject args);
 }

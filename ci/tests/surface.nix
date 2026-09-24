@@ -63,6 +63,7 @@ in
         "query"
         "render"
         "select"
+        "why"
       ];
     };
 
@@ -137,16 +138,13 @@ in
       };
     };
 
-    # THE RESERVED SET, published so a reader can see what this gate defers and to which layer.
+    # THE RESERVED SET, published so a reader can see what no route serves. `reaches` and `why` left
+    # it when the program route landed; path enumeration stays, permanently.
     test-the-reserved-constructs-are-published = {
       expr = genInspect.reservedNames;
       expected = [
-        "closure"
         "path"
         "paths"
-        "reachable"
-        "reaches"
-        "why"
       ];
     };
 

@@ -32,7 +32,8 @@ let
 
   q = admitted.inspector.query;
 
-  knownTables = "belfry, chime, edge, peal, ringer, tocsin";
+  # `reaches` is known without being an IR table: the program route computes it.
+  knownTables = "belfry, chime, edge, peal, reaches, ringer, tocsin";
 
   # ── THE FIXTURE FOR THE IR DOOR ──
   # A model-true atom AT A PUBLISHED LABEL that no rule derives and no relation declares. `housed` is
@@ -121,17 +122,39 @@ in
       expectedError.msg = exactly "gen-inspect: unknown kind 'anvil'; known: belfry, chime, peal, ringer, tocsin";
     };
 
-    # ── DOOR 5: ★ THIS GATE'S OWN LIMIT, refused at compile BY NAME ──
-    # A door and not a stub: a stub answering silently would make gate 2's replacement invisible.
-    # A `JOIN` is NOT in this set — it routes to the executor, and the control below says so.
-    test-a-reachability-construct-is-refused-naming-the-construct = {
-      expr = q "SELECT src FROM reaches";
-      expectedError.msg = contains "gen-inspect: unsupported construct 'reaches' (reachability); it compiles onto the program layer, which this gate does not build.";
+    # ── DOOR 5: ★ PATH ENUMERATION, refused at compile BY NAME, PERMANENTLY ──
+    # On a cyclic graph the set of paths is infinite, so no gate serves it; the message says so and
+    # names what to ask instead. (`reaches` and `why` were refused here until the program route
+    # landed; they answer now, in `./tests/program.nix`.)
+    test-path-enumeration-is-refused-as-permanent = {
+      expr = q "SELECT dst FROM paths WHERE src = 'hemony'";
+      expectedError.msg = exactly "gen-inspect: unsupported construct 'paths' (path enumeration); a cyclic graph has infinitely many paths, so no finite answer exists and no gate adds one. Ask `reaches` for what a path reaches and `why` for the edge that carries it.";
     };
 
-    test-an-explanatory-construct-is-refused-naming-the-construct = {
-      expr = q "SELECT why FROM edge";
-      expectedError.msg = contains "gen-inspect: unsupported construct 'why'";
+    # `reachable` and `closure` are not aliases: one relation has one name, and the known set names it.
+    test-a-synonym-of-reaches-is-an-unknown-name = {
+      expr = q "SELECT dst FROM reachable";
+      expectedError.msg = exactly "gen-inspect: unknown name 'reachable'; known: ${knownTables}";
+    };
+
+    # ── DOOR 9: ★ THE PROGRAM ROUTE'S VALUES ──
+    # Without the `via` door an unknown label grounds no edge and answers the reflexive row alone at
+    # exit 0 — "hemony reaches nothing".
+    test-an-unknown-via-is-refused-off-the-label-set = {
+      expr = q "SELECT dst FROM reaches WHERE src = 'hemony' AND via = 'anvils'";
+      expectedError.msg = exactly "gen-inspect: unknown via 'anvils'; known: absorbs, admits, enrolled, housed, hung, rings, *";
+    };
+
+    # The door refuses an unknown source before gen-program's frozen-set door would.
+    test-an-unknown-reaches-source-is-refused-off-the-relata-domain = {
+      expr = q "SELECT dst FROM reaches WHERE src = 'anvil' AND via = '*'";
+      expectedError.msg = exactly "gen-inspect: unknown src 'anvil'; known: campanile, lantern, compline, evensong, matins, chiming, full-circle, hemony, mears, rudhall, angelus, bourdon, sanctus, tenor";
+    };
+
+    # `why` on something that is neither an IR key nor a reaches atom.
+    test-why-refuses-an-atom-it-cannot-derive = {
+      expr = admitted.inspector.why "rings:hemony";
+      expectedError.msg = exactly "gen-inspect: 'rings:hemony' is neither an IR edge key nor a reaches atom";
     };
 
     # ── DOOR 6: ★ A MODEL-TRUE ATOM AT AN EDGE LABEL WITH NO IR EDGE ──

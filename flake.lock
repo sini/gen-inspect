@@ -65,6 +65,29 @@
         "type": "github"
       }
     },
+    "gen-program": {
+      "inputs": {
+        "gen-prelude": [
+          "gen-prelude"
+        ],
+        "gen-scope": [
+          "gen-scope"
+        ]
+      },
+      "locked": {
+        "lastModified": 1790267620,
+        "narHash": "sha256-fU8Uu8YLEuyvls439WyJV131x8QbsDXHvVIvkwx4x5c=",
+        "owner": "sini",
+        "repo": "gen-program",
+        "rev": "1f68a4b1fc5efb1a23424c26291b55fe531cf8d4",
+        "type": "github"
+      },
+      "original": {
+        "owner": "sini",
+        "repo": "gen-program",
+        "type": "github"
+      }
+    },
     "gen-scope": {
       "inputs": {
         "gen-graph": [
@@ -111,6 +134,7 @@
       "inputs": {
         "gen-graph": "gen-graph",
         "gen-prelude": "gen-prelude",
+        "gen-program": "gen-program",
         "gen-scope": "gen-scope",
         "gen-select": "gen-select"
       }

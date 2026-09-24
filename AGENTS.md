@@ -9,7 +9,7 @@ makes the conformance true by construction rather than by inspection.
 
 ## The published surface
 
-The library is a function of its injected substrate: `import ./lib { prelude, graph, select, scope }`. The root is published **UNAPPLIED** (`flake.nix`'s output is `lib = import ./.;`), which
+The library is a function of its injected substrate: `import ./lib { prelude, graph, select, scope, program }`, with `program` gen-program APPLIED. The root is published **UNAPPLIED** (`flake.nix`'s output is `lib = import ./.;`), which
 is the framework-stratum convention — the hub applies it verbatim through `gen/lib/hubSubstrate.nix`,
 so an APPLIED output here would abort every hub evaluation with `attempt to call something which is not a function but a set`.
 
@@ -43,12 +43,15 @@ so an APPLIED output here would abort every hub evaluation with `attempt to call
 - **`sql.nix`** / **`executor.nix`** — COPIES from `gen-scope/examples/sql-schema` at gen-scope
   `675d9f3`, each with an origin header naming the source md5 and the whole diff. An example is not
   published surface and a second root input to reach one is what ADR-0037 forbids.
-- **`compile.nix`** — the three-route rule, and the reserved-construct door this gate refuses at.
-- **`door.nix`** — unknown table, unknown column, unknown label value, unknown kind value, unknown
-  or duplicate qualifier (a FROM/JOIN item's qualifier is its alias, else its table name).
+- **`compile.nix`** — the three-route rule and the PROGRAM ROUTE: `reaches` grounded per FROM/JOIN
+  occurrence as gen-program declarations and solved on gen-scope's engine, handed to the executor as
+  a table; `why` (one-step, body-checked witnesses); the permanent path-enumeration refusal.
+- **`door.nix`** — unknown table, unknown column, unknown label, kind and `via` value, unknown `src`
+  on a `reaches` query, unknown or duplicate qualifier (a FROM/JOIN item's qualifier is its alias,
+  else its table name).
 - **`select.nix`** — IR + selector → IR′, carrying origins forward.
 - **`render.nix`** — mermaid, dot, JSON. Reads the IR, never the scope.
-- **`inspector.nix`** — `mkInspector scope → { facts, select, query, parse, render }`.
+- **`inspector.nix`** — `mkInspector scope → { facts, select, query, parse, render, why }`.
 
 ## Invariants a change must not break
 
@@ -57,7 +60,19 @@ so an APPLIED output here would abort every hub evaluation with `attempt to call
   `enrolled` is both a declared and a derived label, so a literal `[ "rings" ]` loses a true edge at
   exit 0. The door that catches it is `unrepresented` in `materialize.nix`.
 - ★★ **A witness is body-checked, never head-matched** (Van Gelder, Ross & Schlipf 1991 Def 3.3). A
-  head match alone reports a rule whose body is FALSE in a field named `fired`.
+  head match alone reports a rule whose body is FALSE in a field named `fired`. ONE construction,
+  `witnesses` in `materialize.nix`, serves the policy program and the `reaches` query program; the
+  caller supplies the rule filter (`bodied` for policy origins, none for the query program).
+- ★★ **`reaches` pushdown is PER OCCURRENCE and prunes, never decides.** The executor binds each
+  FROM/JOIN item separately and merges a joined row as `left // right`, so an unqualified column
+  binds to the right-hand item. Grounding one table for every occurrence, or pushing an unqualified
+  `src` another item also carries, answers WRONG at exit 0. `ci/tests/program.nix` holds the two
+  parity cells (pruned = unpruned).
+- ★★ **The `reaches` relata domain is node ids ∪ every edge endpoint**, and it is both gen-program's
+  `frozen` set and the rows' `dst` domain. Node ids alone refuse a closure crossing a dangling
+  endpoint the IR admits, and a widened `frozen` alone drops that endpoint from the rows.
+- ★ **C2's recursion cell needs a depth-≥2 question in the ADMITTED state.** Every depth-1 question,
+  and (`*`, hemony) withdrawn, reads green against a one-hop route with no recursion in it.
 - ★ **`origins` stays a FIELD of the IR, not a derived accessor.** Gate 3 needs provenance to survive
   `select` and `compile`; a derived accessor closes that seam.
 - ★ **`derivations` is a LIST and `fired` is per-derivation.** Recursion produces multiply-derived
@@ -76,16 +91,28 @@ so an APPLIED output here would abort every hub evaluation with `attempt to call
   over the same correct tree reads non-zero, which is ordinary English in prose, and a cell written
   on the bare predicate reds against a conforming build.
 
-## What this gate does NOT build
+## The gen-program dependency
 
-The **program route**. Reachability, transitive closure and `WHY` are refused at `compile` **by name**
-— a door, not a stub, so its replacement changes no caller. `gen-scope` is already a formal of
-`lib/default.nix` for exactly that landing; `gen-program` is not, because the hub's substrate fold is a
-function of its `members` binding and `program` is one of the three UNAPPLIED members that fold
-produces. Gate 2 adds the formal, the flake input and the hub's fourth substrate key together.
+★★ **A MEMBER DEPENDING ON AN UNAPPLIED MEMBER TAKES IT APPLIED, AND ITS SHIM DEFAULT NAMES ITS
+SIBLING FORMALS** — the pattern, first instanced here. `default.nix`:
+`program ? inputs.gen-program or (import (src [ "gen-program" ]) { inherit prelude scope; })`. The
+`dep` form (`import (src segs) { }`) would self-fetch gen-program's own locked gen-scope, a second
+substrate instance in one evaluation (ADR-0008 §1). `program` is in `deps`, so the eager boundary force
+reaches it.
 
-Also deferred: planted violations across every cell, query/graph parity, a `TERMINOLOGY.md` census,
-picture fidelity against the built svg, and a staleness enforcer for the copied parser.
+★ **Two gen-program instances on the STANDALONE path, one on the hub's flake path.** Standalone,
+the default above builds one on this root's `prelude`/`scope`, beside the roster's own. Through the
+hub, the substrate fold hands gen-inspect the roster's applied `program`. That second instance is the
+standalone-path class the hub's substrate work already deferred; it is not new here.
+
+★ **Until the hub injects `program`, the hub's flake path reaches this library through the standalone
+default too**: the hub applies the root with its four substrate keys, and the fifth falls back to the
+sibling-formal default. The default is what keeps every hub consumer green until then.
+
+Deferred: planted violations across every cell, an E = G census over every node and label, witness
+completeness, a well-founded proof-tree `why` (needs engine stages), a cost census for the
+unconstrained relation, a `TERMINOLOGY.md` census, picture fidelity against the built svg, and a
+staleness enforcer for the copied parser.
 
 ## Tests
 
@@ -122,14 +149,14 @@ in the hub's ci.
 
 - **It never evaluates.** Every fixpoint goes through gen-scope, the sole evaluator (ADR-0006).
   This library READS a model an evaluator already produced and computes none of its own — which is
-  also why the program route is a refusal door rather than a local fixpoint.
+  also why `reaches` is a gen-program declaration set solved by gen-scope rather than a local walk.
 - **It defines no substrate vocabulary** (ADR-0035). Its kinds, labels and error text are invented
   end to end, and `ci/tests/conformance.nix` is the position-scoped scan that says so, with the
   unstripped origin alias table as its firing control.
 - **It gives the policy edge no second structure.** ADR-0012: the dynamic edge joins the ONE edge
   list and is told apart by its `origin`, never by living somewhere else. `materialize.nix` builds
   `declaredEdges ++ policyEdges` and the graph is derived from that one list.
-- **It re-exports nothing of its substrate.** gen-select, gen-graph and gen-prelude arrive as
+- **It re-exports nothing of its substrate.** gen-select, gen-graph, gen-prelude and gen-program arrive as
   injected VALUES; no construct of theirs is republished under a name here.
 - **It does not implement the provenance semiring.** `origins` is why/derivation provenance in the
   sense of Cheney, Chiticariu & Tan (2009), a name taken from the literature rather than a citation

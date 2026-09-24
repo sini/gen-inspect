@@ -10,7 +10,7 @@
     # ★ THE SUBSTRATE IS TAKEN DIRECTLY, NEVER THROUGH THE HUB. The hub pins this repository, so a
     # hub input here closes a cycle in the oracle graph (ADR-0037: there are no cycles; the hub is no
     # gen library's input except gen-demo and demos/examples). The four members the root flake
-    # declares, with its `follows`, plus `gen-program`, which only the `examples/fleet` fixture needs.
+    # declares, with its `follows`; `gen-program` serves the library's program route and the fixture.
     # The entry-path agreement cell that once needed the hub is the hub's own property and lives in
     # its ci as `hub-entry-agreement` (den-hoag-mxbv4).
     gen-prelude.url = "github:sini/gen-prelude";
@@ -35,6 +35,10 @@
       graph = inputs.gen-graph.lib;
       select = inputs.gen-select.lib;
       scope = inputs.gen-scope.lib;
+      # The application the hub's `lib/hubSubstrate.nix` performs for `program`, and the ONE
+      # gen-program instance this oracle holds: the library's program route and the fleet fixture
+      # both take it.
+      genProgram = inputs.gen-program.lib { inherit prelude scope; };
       genInspect = import ../lib {
         inherit
           prelude
@@ -42,9 +46,8 @@
           select
           scope
           ;
+        program = genProgram;
       };
-      # The application the hub's `lib/hubSubstrate.nix` performs for `program`.
-      genProgram = inputs.gen-program.lib { inherit prelude scope; };
 
       mkFleet =
         genInspect': silenced:

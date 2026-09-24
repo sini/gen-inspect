@@ -32,23 +32,14 @@
   prelude,
   graph,
   select,
-  # ★ THE GATE-2 SEAM. `scope` is the PROGRAM ROUTE's evaluator — the third row of `./compile.nix`'s
-  # table, where reachability, transitive closure and `WHY` compile onto gen-scope's engine. At this
-  # gate that route is a REFUSAL DOOR and the value is not read; it is a formal now rather than a
-  # later widening because the design fixes the seam now (§4, "gate 2 replaces the body with the
-  # program route and CHANGES NO CALLER").
-  #
-  # ★★ gen-program IS NOT A FORMAL HERE, AND THE REASON IS A MEASURED PROPERTY OF THE HUB. The design
-  # names five dependencies; four are takeable and the fifth is not. `gen/lib/hubSubstrate.nix` is a
-  # function of the hub's `members` binding, and `members` holds exactly the EIGHTEEN roster entries
-  # whose flake `.lib` is published APPLIED — measured at the hub: algebra aspects bind class dispatch
-  # graph identity link memo merge prelude product schema scope select settings types view. `program`
-  # is one of the three UNAPPLIED members that the substrate fold itself produces, so it is not in
-  # scope where a fourth substrate entry is written, and asking for it would mean rewriting that fold
-  # to be self-referential — a hub architecture change the design did not specify. `prelude`, `graph`,
-  # `select` and `scope` are all in `members`, so the other four arrive normally. Gate 2 adds this
-  # formal in the same commit that replaces `compile`'s body.
+  # `scope` is gen-scope, the sole evaluator (ADR-0006). The program route reaches it through
+  # `program`; it stays a formal because the standalone entry (`../default.nix`) applies gen-program
+  # to it, and retiring it touches the hub's supply.
   scope,
+  # `program` is gen-program APPLIED — like the other four, a value constructed in the consumer's own
+  # evaluation. `./compile.nix` builds each `reaches` question as its declarations and solves it with
+  # `program.model`, which calls gen-scope's `solve`.
+  program,
 }:
 let
   # gen-prelude plus the seven names the copied parser and executor need and the prelude does not
@@ -62,7 +53,11 @@ let
   };
   materialize = import ./materialize.nix { inherit lib graph; };
   selecting = import ./select.nix { inherit lib graph; };
-  compile = import ./compile.nix { inherit lib; };
+  compile = import ./compile.nix {
+    inherit lib program;
+    inherit (materialize) witnesses;
+    inherit (executor) qualifierOf;
+  };
   door = import ./door.nix {
     inherit lib compile;
     inherit (executor) qualifierOf;
