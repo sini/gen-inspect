@@ -266,11 +266,17 @@ machines, users and networks, and this library's vocabulary is invented end to e
 ## Tests
 
 ```
-nix flake check ./ci                    # the suites, through the batch asserter
-nix-unit --flake ./ci#tests             # the same cells, per cell
-nix-unit --flake ./ci#testsError        # the refusals, asserted by message
+nix develop ./ci --command ci                # the cells, per cell, guarded
+nix develop ./ci --command ci --tests-error  # the refusals, asserted by message, guarded
+nix flake check ./ci                    # the suites, through the batch asserter; unguarded
+nix-unit --flake ./ci#tests             # the same cells, per cell; unguarded
+nix-unit --flake ./ci#testsError        # the refusals, asserted by message; unguarded
 cd ci && nix fmt -- --ci
 ```
+
+`ci` refuses when anything under a declared read root is unknown to git — any extension or name,
+`_`-prefixed included — and the remedy is `git add` or a move. The unguarded forms read a
+git-filtered copy of the tree, so an untracked cell is silently absent and the run stays green.
 
 Cells whose subject is an error **message** live on `testsError`: the asserter behind
 `checks.default` forces every `flake.tests` cell's `expr` unconditionally, so a throwing `expr`

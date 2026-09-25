@@ -117,11 +117,17 @@ staleness enforcer for the copied parser.
 ## Tests
 
 ```
-nix flake check ./ci                    # the suites, through the batch asserter
-nix-unit --flake ./ci#tests             # the same cells, per cell
-nix-unit --flake ./ci#testsError        # the refusals, asserted by message
+nix develop ./ci --command ci                # the cells, per cell, guarded
+nix develop ./ci --command ci --tests-error  # the refusals, asserted by message, guarded
+nix flake check ./ci                    # the suites, through the batch asserter; unguarded
+nix-unit --flake ./ci#tests             # the same cells, per cell; unguarded
+nix-unit --flake ./ci#testsError        # the refusals, asserted by message; unguarded
 cd ci && nix fmt -- --ci
 ```
+
+`ci` refuses when anything under a declared read root is unknown to git — any extension or name,
+`_`-prefixed included — and the remedy is `git add` or a move. The unguarded forms read a
+git-filtered copy of the tree, so an untracked cell is silently absent and the run stays green.
 
 ★ **Read the asserter's own count, not the nix-unit summary.** nix-unit collects only `test`-prefixed
 attrs while `checks.default` forces ALL of `flake.tests`; a repo whose cells are not test-prefixed
