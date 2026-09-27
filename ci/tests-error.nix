@@ -205,5 +205,22 @@ in
       };
       expectedError.msg = exactly "gen-inspect: not an evaluated scope; missing field(s): model";
     };
+
+    # ── DOOR-CHECKS (den-hoag-7gp66 P1): `graphSubject`'s two named, catchable refusals, verbatim ──
+    # `./tests/doors.nix` already proves each one is CATCHABLE (`tryEval` + `deepSeq`); these two pin
+    # WHICH message fired and that it names the door first (R6), matching this file's own idiom.
+    test-graphsubject-missing-required-field-names-the-door = {
+      expr = builtins.deepSeq (genInspect.graphSubject { nodes = [ "a" ]; }) null;
+      expectedError.msg = exactly "gen-inspect.graphSubject: required field 'perLabel' is missing (required: 'nodes', 'perLabel') (in prelude.checkRequired)";
+    };
+
+    test-graphsubject-unknown-option-names-the-door = {
+      expr = builtins.deepSeq (genInspect.graphSubject {
+        nodes = [ "a" ];
+        perLabel = { };
+        zzgi9k3qx = 1;
+      }) null;
+      expectedError.msg = exactly "gen-inspect.graphSubject: 'zzgi9k3qx' is not an option of this door; the options are closed (accepted: 'nodes', 'perLabel', 'kind') (in prelude.checkOptions)";
+    };
   };
 }

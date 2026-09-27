@@ -267,12 +267,32 @@ let
   # Any gen-graph labeled value is a subject with no policy half. It arrives through a wrapper
   # rather than a shape probe so that `materialize`'s missing-field refusal stays NAMED: a probe
   # would silently accept a graph as a scope and answer about an empty program.
+  #
+  # MIXED class (den-hoag-7gp66 P1, §v1.2/§v1.7 row 7-15): closed over the whole set — transitional,
+  # per §v1.2, until P2 moves the options off the record. A native closed formal here aborted an
+  # unknown or missing field past `tryEval` (ADR-0025 item 1); `lib.checkOptions`/`checkRequired`
+  # (gen-prelude, threaded through via `./extras.nix`'s `prelude // { … }`) make both refusals named
+  # and catchable instead.
   graphSubject =
-    {
-      nodes,
-      perLabel,
-      kind ? "vertex",
-    }:
+    args:
+    let
+      checked =
+        lib.checkOptions "gen-inspect.graphSubject"
+          [
+            "nodes"
+            "perLabel"
+            "kind"
+          ]
+          (
+            lib.checkRequired "gen-inspect.graphSubject" [
+              "nodes"
+              "perLabel"
+            ] args
+          );
+      nodes = checked.nodes;
+      perLabel = checked.perLabel;
+      kind = checked.kind or "vertex";
+    in
     {
       register.${kind} = lib.genAttrs nodes (_: { });
       # `perLabel` is an ACCESSOR per label; `relations` is the same relation as DATA. The node set
