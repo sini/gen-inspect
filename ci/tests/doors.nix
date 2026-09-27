@@ -12,17 +12,25 @@
 #
 # WHICH refusal fired is a claim about the message and `tryEval` yields only `success`; the byte
 # goldens naming the door (R6) live in `ci/tests-error.nix`'s `flake.testsError.door-checks`.
+#
+# TWO STRENGTHS OF "CATCHABLE" ARE PINNED, DELIBERATELY: `refusesCatchably` (`deepSeq`) is the general
+# form used by this door's siblings across the roster; `refusesAtApplication` (`seq`, applied with no
+# later args and no field read) is the sharper bar — the refusal must fire the moment the door is
+# called, not only when a caller happens to force the one branch that reads the checked record.
 {
   genInspect,
   ...
 }:
 let
-  # `deepSeq`, NOT `seq`: `graphSubject`'s checked bindings are read inside `register.${kind}` and
-  # `relations`'s value, not the returned attrset's own (static) top-level names, so a bare `tryEval`
-  # of the call answers `true` without ever forcing the check — measured on this door before this
-  # comment was written. Forcing deeply is what makes the check meet the caller.
   refusesCatchably = e: !(builtins.tryEval (builtins.deepSeq e null)).success;
   answers = e: (builtins.tryEval (builtins.deepSeq e null)).success;
+
+  # ★ THE SHARPER BAR: the refusal must fire ON APPLICATION, not only when a caller happens to force
+  # the one branch (`register`/`relations`) that reads `checked` — `program`/`model` are static and
+  # never would have tripped it. Measured before `lib/materialize.nix`'s `builtins.seq checked { … }`
+  # was added: `tryEval (seq (graphSubject bad) null)` answered `success` (a bad record silently
+  # admitted under WHNF alone). `seq`, no later args, no field read, is the whole predicate.
+  refusesAtApplication = e: !(builtins.tryEval (builtins.seq e null)).success;
 
   validArgs = {
     nodes = [
@@ -45,6 +53,10 @@ in
       expr = answers 1;
       expected = true;
     };
+    test-control-seq-catches-an-ordinary-throw = {
+      expr = refusesAtApplication (throw "control probe, not this suite's subject");
+      expected = true;
+    };
 
     # graphSubject — MIXED class (checkOptions composed over checkRequired).
     test-graphsubject-missing-required-field-refused-catchably = {
@@ -53,6 +65,15 @@ in
     };
     test-graphsubject-unknown-option-refused-catchably = {
       expr = refusesCatchably (genInspect.graphSubject (validArgs // { zzgi9k3qx = 1; }));
+      expected = true;
+    };
+    # The application-time bar (see `refusesAtApplication` above): `seq` alone, no field read.
+    test-graphsubject-missing-required-field-refused-at-application = {
+      expr = refusesAtApplication (genInspect.graphSubject { nodes = [ "a" ]; });
+      expected = true;
+    };
+    test-graphsubject-unknown-option-refused-at-application = {
+      expr = refusesAtApplication (genInspect.graphSubject (validArgs // { zzgi9k3qx = 1; }));
       expected = true;
     };
     test-graphsubject-valid-call-is-unchanged = {

@@ -293,7 +293,12 @@ let
       perLabel = checked.perLabel;
       kind = checked.kind or "vertex";
     in
-    {
+    # `program` and `model` below are static — neither reads `checked` — so without this `seq` the
+    # refusal would fire only for a caller who happens to force `register`/`relations`, never for one
+    # who reads `program`/`model` alone or merely applies the door to WHNF (measured: `tryEval
+    # (builtins.seq (graphSubject bad) null)` answered `success` with no `seq` here). Forcing `checked`
+    # at application makes the refusal unconditional on what the caller later reads.
+    builtins.seq checked {
       register.${kind} = lib.genAttrs nodes (_: { });
       # `perLabel` is an ACCESSOR per label; `relations` is the same relation as DATA. The node set
       # is what makes the conversion possible at all — an accessor's domain is not enumerable, which
