@@ -70,12 +70,9 @@ let
         // {
           edge = lib.filterAttrs (k: _: builtins.elem k keptKeys) ir.tables.edge;
         };
-      graph = graph.labeledFrom {
-        nodes = ids;
-        perLabel = lib.genAttrs ir.labels (
-          label: id: map (e: e.dst) (builtins.filter (e: e.label == label && e.src == id) keptEdges)
-        );
-      };
+      graph = graph.labeledFrom (lib.genAttrs ir.labels (
+        label: id: map (e: e.dst) (builtins.filter (e: e.label == label && e.src == id) keptEdges)
+      )) ids;
     };
 in
 {

@@ -26,7 +26,7 @@
 let
   reach =
     ir: from:
-    genGraph.query {
+    genGraph.query { } {
       graph = ir.graph;
       inherit from;
       follow = genGraph.regex.star (genGraph.regex.lit "rings");
@@ -35,7 +35,7 @@ let
   # alternatives, dedups and sorts, which is only expressible over a list.
   ringers =
     ir:
-    genGraph.query {
+    genGraph.query { } {
       graph = ir.graph;
       from = "hemony";
       follow = genGraph.regex.star (

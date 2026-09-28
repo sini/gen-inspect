@@ -34,7 +34,7 @@ let
   walk =
     facts: via: src:
     sort (
-      genGraph.query {
+      genGraph.query { } {
         graph = facts.graph;
         from = src;
         follow = genGraph.regex.star (

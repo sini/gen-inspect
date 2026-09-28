@@ -257,10 +257,7 @@ let
           labels
           ;
         origins = checked;
-        graph = graph.labeledFrom {
-          inherit perLabel;
-          nodes = map (n: n.id) nodes;
-        };
+        graph = graph.labeledFrom perLabel (map (n: n.id) nodes);
       };
 
   # ── THE DEGENERATE CASE, THROUGH AN EXPLICIT WRAPPER ──
