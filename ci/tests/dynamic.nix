@@ -91,6 +91,7 @@ let
     ];
   };
   headMatchModel = genProgram.model {
+    prior = null;
     program = headMatchProgram;
     complete = true;
     interpretation = [ ];

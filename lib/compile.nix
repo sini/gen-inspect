@@ -184,6 +184,7 @@ let
           edgeFacts ++ builtins.concatMap (via: builtins.concatMap (perSource via) srcSet) viaSet;
       };
       model = program.model {
+        prior = null;
         program = prog;
         interpretation = [ ];
         complete = true;

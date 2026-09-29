@@ -56,6 +56,7 @@ let
     ];
   };
   strayModel = genProgram.model {
+    prior = null;
     program = strayProgram;
     complete = true;
     interpretation = [

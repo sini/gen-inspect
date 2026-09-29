@@ -156,7 +156,9 @@ let
   model = genProgram.model {
     inherit program;
     complete = true;
-    # The caller-supplied interpretation — a prior pass's verdicts. This is the withdrawn arm's
+    prior = null;
+    # The caller-supplied interpretation — verdicts the caller asserts (gen-program's assertion
+    # channel; a previous pass's record would arrive as `prior`). This is the withdrawn arm's
     # whole mechanism, and it is why an atom asserted at a dynamic label with no rule needs a
     # refusal BY NAME rather than an index abort.
     interpretation =
