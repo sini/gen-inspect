@@ -55,13 +55,34 @@
           genInspect = genInspect';
           inherit genProgram silenced;
         };
+
+      # `examples/fleet/flake.nix` takes the hub for its substrate. Its `outputs` are applied here to
+      # a stand-in `gen.lib.mkGenLibs` built from this oracle's own inputs, so the example's flake is
+      # evaluated against the working tree with no hub input and no cycle (den-hoag-tyu25).
+      fleetFlake = (import ../examples/fleet/flake.nix).outputs {
+        inherit (inputs) nixpkgs;
+        gen.lib.mkGenLibs = _: {
+          inherit
+            prelude
+            graph
+            select
+            scope
+            ;
+          program = genProgram;
+        };
+      };
     in
     gen-harness.lib.mkCi {
       inherit inputs;
       name = "gen-inspect";
       testModules = ./tests;
       specialArgs = {
-        inherit genInspect genProgram mkFleet;
+        inherit
+          genInspect
+          genProgram
+          mkFleet
+          fleetFlake
+          ;
         genGraph = graph;
         genSelect = select;
         genPrelude = prelude;

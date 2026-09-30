@@ -1,5 +1,9 @@
-# fleet/flake.nix takes the hub (integration); its default.nix entry value is what is declarable.
-{ genInspect, mkFleet, ... }:
+# The fleet example's flake, applied to the working tree (ci/flake.nix `fleetFlake`). The declared
+# value is its non-derivation outputs: `packages` is derivations, which forcing would only reach
+# through nixpkgs and never build, so it is outside the force domain.
+{ fleetFlake, ... }:
 {
-  gen.ci.examples.fleet = mkFleet genInspect false;
+  gen.ci.examples.fleet = {
+    inherit (fleetFlake) inspect inspect-withdrawn;
+  };
 }
