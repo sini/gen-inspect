@@ -2,7 +2,7 @@
 #
 # ★ WHY THIS EXISTS AT ALL: against the raw row source, every one of these shapes reads `[]` or a row
 # of `null`s AT EXIT 0. An unknown table yields no rows; a typo'd column projects `null`; a label
-# value nothing publishes yields the empty answer. All three are indistinguishable from "the policy
+# value nothing publishes yields the empty answer. All three are indistinguishable from "the rule
 # produced nothing", which is the one reading this library exists to make impossible.
 #
 # The known sets are all in hand at the IR — `ir.tables`, each table's column projection,
@@ -56,7 +56,7 @@ let
 
   # ── THE VALUE DOOR ──
   # ★ A well-formed `WHERE label = 'anvils'` over a KNOWN column returns `[]` at exit 0 without this
-  #   — indistinguishable from "the policy produced nothing". `kind` is here on the IR contract's
+  #   — indistinguishable from "the rule produced nothing". `kind` is here on the IR contract's
   #   own words: `kinds` is "what a `WHERE kind = '…'` resolves against".
   #
   # ★ A MEASURED DOOR THIS RESPECTS RATHER THAN DUPLICATES: gen-select's own `sel.kind` refuses a

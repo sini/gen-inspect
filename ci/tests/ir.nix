@@ -33,7 +33,7 @@ let
 
   originKind = k: x: builtins.length (builtins.filter (e: e.origin.kind == k) x.edges);
   keysOf =
-    x: map (e: "${e.label}:${e.src}:${e.dst}") (builtins.filter (e: e.origin.kind == "policy") x.edges);
+    x: map (e: "${e.label}:${e.src}:${e.dst}") (builtins.filter (e: e.origin.kind == "rule") x.edges);
 in
 {
   flake.tests.ir = {
@@ -68,23 +68,23 @@ in
       expr = {
         total = builtins.length ir.edges;
         declaration = originKind "declaration" ir;
-        policy = originKind "policy" ir;
+        rule = originKind "rule" ir;
         origins = builtins.length (builtins.attrNames ir.origins);
       };
       expected = {
         total = 14;
         declaration = 12;
-        policy = 2;
+        rule = 2;
         origins = 14;
       };
     };
 
     # ★★ `enrolled` IS BOTH A DECLARED AND A DERIVED LABEL, AND THAT IS THE POINT. `hemony` is
     # declared enrolled in `chiming` and DERIVED enrolled in `full-circle`; the IR carries both under
-    # one label, each with its own origin. A construction filtering policy edges through a
+    # one label, each with its own origin. A construction filtering rule edges through a
     # hand-written label list drops the derived one WITH NO DIAGNOSTIC — the defect this cell's red
     # arm reproduces, and `ci/tests-error.nix` holds the refusal that now catches it.
-    test-the-policy-keys-include-a-derived-edge-at-a-declared-label = {
+    test-the-rule-keys-include-a-derived-edge-at-a-declared-label = {
       expr = keysOf ir;
       expected = [
         "enrolled:hemony:full-circle"
@@ -143,12 +143,12 @@ in
       };
     };
 
-    # ── THE SECOND ARM. The policy's conclusion withdrawn, and the fixture is otherwise identical. ──
-    test-withdrawing-the-policy-drops-exactly-one-edge = {
+    # ── THE SECOND ARM. The rule's conclusion withdrawn, and the fixture is otherwise identical. ──
+    test-withdrawing-the-rule-drops-exactly-one-edge = {
       expr = {
         total = builtins.length irOut.edges;
         declaration = originKind "declaration" irOut;
-        policy = originKind "policy" irOut;
+        rule = originKind "rule" irOut;
         origins = builtins.length (builtins.attrNames irOut.origins);
         keys = keysOf irOut;
         ringsPresent = irOut.origins ? "rings:hemony:bourdon";
@@ -158,7 +158,7 @@ in
       expected = {
         total = 13;
         declaration = 12;
-        policy = 1;
+        rule = 1;
         origins = 13;
         keys = [ "enrolled:hemony:full-circle" ];
         ringsPresent = false;

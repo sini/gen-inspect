@@ -3,7 +3,7 @@
 # ★★ WHY THESE ARE THE COMPONENT AND NOT A NICETY. Against a raw row source EVERY one of these
 # shapes reads `[]` or a row of `null`s AT EXIT 0 — an unknown table yields no rows, a typo'd column
 # projects `null`, a label value nothing publishes yields the empty answer. All three are
-# indistinguishable from "the policy produced nothing", which is the one reading this library exists
+# indistinguishable from "the rule produced nothing", which is the one reading this library exists
 # to make impossible. A door that refuses is what turns an owner's wrong answer into a question.
 #
 # ★ WHY A SECOND OUTPUT RATHER THAN A SECOND SUITE. The batch asserter behind `checks.default`
@@ -108,7 +108,7 @@ in
 
     # ── DOOR 4: ★ AN UNKNOWN LABEL VALUE ──
     # `WHERE label = 'anvils'` is a WELL-FORMED query over a KNOWN column. Without this door it
-    # returns `[]` at exit 0 and reads as "the policy produced nothing" — the same hazard class the
+    # returns `[]` at exit 0 and reads as "the rule produced nothing" — the same hazard class the
     # dynamic-edge cell closes for the graph answer. The label set is in hand; refusing costs
     # nothing.
     test-an-unknown-label-value-is-refused-off-the-label-set = {

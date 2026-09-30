@@ -50,7 +50,7 @@ let
 in
 {
   flake.tests.reach = {
-    test-the-policy-edge-is-walkable = {
+    test-the-rule-edge-is-walkable = {
       expr = reach irIn "hemony";
       expected = [
         "bourdon"
@@ -58,7 +58,7 @@ in
       ];
     };
 
-    test-withdrawing-the-policy-leaves-only-the-origin-node = {
+    test-withdrawing-the-rule-leaves-only-the-origin-node = {
       expr = reach irOut "hemony";
       expected = [ "hemony" ];
     };

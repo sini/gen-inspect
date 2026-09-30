@@ -66,7 +66,7 @@
         genSelect = select;
         genPrelude = prelude;
         # The two arms of the example fleet, built once and shared. `admitted` is the whole subject;
-        # `withdrawn` asserts the control atom and loses the policy's conclusion.
+        # `withdrawn` asserts the control atom and loses the rule's conclusion.
         admitted = mkFleet genInspect false;
         withdrawn = mkFleet genInspect true;
       };

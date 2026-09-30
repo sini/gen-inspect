@@ -4,8 +4,8 @@
 # renderer; like den-diagram is architected but better". A renderer that reached past the IR would
 # make every query's result unrenderable, since a query's result is an IR and not a scope.
 #
-# ★ THE POLICY EDGE IS VISIBLY DISTINCT, AND THAT IS THE COMPONENT'S SECOND EXIT. `origin.kind` is a
-# field of every edge, so "which of these did a policy produce" is a lookup rather than a heuristic:
+# ★ THE RULE EDGE IS VISIBLY DISTINCT, AND THAT IS THE COMPONENT'S SECOND EXIT. `origin.kind` is a
+# field of every edge, so "which of these did a rule produce" is a lookup rather than a heuristic:
 # mermaid gets `-.->` against `-->`, dot gets `style=dashed` against a solid edge.
 #
 # ★★ THE ASSERTION IS SOURCE-SIDE, AND A WHOLE-FILE SVG COUNT IS NOT A PREDICATE. mermaid emits
@@ -31,7 +31,7 @@ let
       edgeLine =
         e:
         let
-          arrow = if e.origin.kind == "policy" then "-.->" else "-->";
+          arrow = if e.origin.kind == "rule" then "-.->" else "-->";
         in
         "  ${handle e.src} ${arrow}|${e.label}| ${handle e.dst}";
     in
@@ -47,7 +47,7 @@ let
       edgeLine =
         e:
         let
-          style = if e.origin.kind == "policy" then ", style=dashed" else "";
+          style = if e.origin.kind == "rule" then ", style=dashed" else "";
         in
         "  \"${e.src}\" -> \"${e.dst}\" [label=\"${e.label}\"${style}];";
     in

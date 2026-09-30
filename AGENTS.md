@@ -1,7 +1,7 @@
 # gen-inspect — agent sheet
 
 The library that interrogates a **materialized gen graph**: which nodes exist and of what kind, which
-edges are declared, which a policy program produced and **why**, and what reaches what.
+edges are declared, which a rule program produced and **why**, and what reaches what.
 
 It implements **no semantics** and **never evaluates**. Every fixpoint goes through gen-scope, the
 sole evaluator (ADR-0006); this library READS a model an evaluator already produced. That is what
@@ -61,8 +61,8 @@ so an APPLIED output here would abort every hub evaluation with `attempt to call
   exit 0. The door that catches it is `unrepresented` in `materialize.nix`.
 - ★★ **A witness is body-checked, never head-matched** (Van Gelder, Ross & Schlipf 1991 Def 3.3). A
   head match alone reports a rule whose body is FALSE in a field named `fired`. ONE construction,
-  `witnesses` in `materialize.nix`, serves the policy program and the `reaches` query program; the
-  caller supplies the rule filter (`bodied` for policy origins, none for the query program).
+  `witnesses` in `materialize.nix`, serves the rule program and the `reaches` query program; the
+  caller supplies the rule filter (`bodied` for rule origins, none for the query program).
 - ★★ **`reaches` pushdown is PER OCCURRENCE and prunes, never decides.** The executor binds each
   FROM/JOIN item separately and merges a joined row as `left // right`, so an unqualified column
   binds to the right-hand item. Grounding one table for every occurrence, or pushing an unqualified
@@ -159,9 +159,9 @@ in the hub's ci.
 - **It defines no substrate vocabulary** (ADR-0035). Its kinds, labels and error text are invented
   end to end, and `ci/tests/conformance.nix` is the position-scoped scan that says so, with the
   unstripped origin alias table as its firing control.
-- **It gives the policy edge no second structure.** ADR-0012: the dynamic edge joins the ONE edge
+- **It gives the rule edge no second structure.** ADR-0012: the dynamic edge joins the ONE edge
   list and is told apart by its `origin`, never by living somewhere else. `materialize.nix` builds
-  `declaredEdges ++ policyEdges` and the graph is derived from that one list.
+  `declaredEdges ++ ruleEdges` and the graph is derived from that one list.
 - **It re-exports nothing of its substrate.** gen-select, gen-graph, gen-prelude and gen-program arrive as
   injected VALUES; no construct of theirs is republished under a name here.
 - **It does not implement the provenance semiring.** `origins` is why/derivation provenance in the

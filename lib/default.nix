@@ -1,8 +1,8 @@
 # gen-inspect — THE LIBRARY THAT INTERROGATES A MATERIALIZED gen GRAPH.
 #
 # A person sits down in front of an assembled graph and asks it questions: which nodes exist and of
-# what kind, which edges are declared, which a policy program produced and WHY, what reaches what. A
-# picture of the same materialization, with the policy's edge visibly distinct, is one output of that
+# what kind, which edges are declared, which a rule program produced and WHY, what reaches what. A
+# picture of the same materialization, with the rule's edge visibly distinct, is one output of that
 # pipeline — not the ask.
 #
 # ── WHY A LIBRARY AND NOT A DEMO ──

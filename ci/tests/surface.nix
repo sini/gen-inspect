@@ -149,20 +149,20 @@ in
     };
 
     # ── THE DEGENERATE CASE ──
-    # A gen-graph value is a subject with no policy half, reached through an EXPLICIT wrapper so the
+    # A gen-graph value is a subject with no rule half, reached through an EXPLICIT wrapper so the
     # missing-field refusal stays named for everything that is neither.
-    test-a-plain-labeled-graph-materializes-with-no-policy-half = {
+    test-a-plain-labeled-graph-materializes-with-no-rule-half = {
       expr = {
         nodes = builtins.length plain.facts.nodes;
         edges = builtins.length plain.facts.edges;
-        policy = builtins.length (builtins.filter (e: e.origin.kind == "policy") plain.facts.edges);
+        rule = builtins.length (builtins.filter (e: e.origin.kind == "rule") plain.facts.edges);
         inherit (plain.facts) labels;
         kinds = builtins.attrNames plain.facts.kinds;
       };
       expected = {
         nodes = 3;
         edges = 2;
-        policy = 0;
+        rule = 0;
         labels = [ "enrolled" ];
         kinds = [ "vertex" ];
       };

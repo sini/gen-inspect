@@ -1,5 +1,5 @@
 {
-  description = "gen-inspect example — a campanology register, a policy that derives one edge no declaration states, and the two human entries over it";
+  description = "gen-inspect example — a campanology register, a rule that derives one edge no declaration states, and the two human entries over it";
 
   # ★ THE EXAMPLE HAS ITS OWN FLAKE, AND THAT IS WHAT KEEPS nixpkgs OUT OF THE LIBRARY. `export` is
   # outside the pure core — den-diagram's own line, matched: "`export` being the only stage that

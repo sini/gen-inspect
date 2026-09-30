@@ -6,18 +6,18 @@
 # `absorbs`, `admits`, `rings` — are the invented vocabulary the ADR's worked-example clause admits.
 #
 # ★★ THE POINT OF THE FIXTURE IS ONE DERIVED EDGE THAT NO DECLARATION STATES. `hemony` reaches
-# `bourdon` because a policy program derives `rings:hemony:bourdon` through two intermediate
+# `bourdon` because a rule program derives `rings:hemony:bourdon` through two intermediate
 # derivations, and no `relations` entry says so. That is the edge a picture must show as visibly
 # distinct and a query must be able to find and explain.
 #
 # ★★ AND `enrolled` IS BOTH A DECLARED AND A DERIVED LABEL, WHICH IS THE SECOND POINT. `hemony` is
 # DECLARED enrolled in `chiming` and DERIVED enrolled in `full-circle`; the IR carries both under one
-# label, each with its own origin. A construction that filtered policy edges through a hand-written
+# label, each with its own origin. A construction that filtered rule edges through a hand-written
 # label list would drop the derived one WITH NO DIAGNOSTIC — the reason `materialize` derives the
 # dynamic label set from the program and refuses a model-true atom with no IR edge BY NAME.
 #
 # `silenced` is a CONTROL ATOM at a label this register does not publish. Asserting it withdraws the
-# policy's conclusion, which is the fixture's second arm: the same subject with one edge gone.
+# rule's conclusion, which is the fixture's second arm: the same subject with one edge gone.
 {
   genInspect,
   genProgram,
@@ -89,7 +89,7 @@ let
     };
   };
 
-  # ── THE POLICY: A TRANSITIVE GRANT ──
+  # ── THE RULE: A TRANSITIVE GRANT ──
   declarations = [
     {
       head = "enrolled:hemony:chiming";

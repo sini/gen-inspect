@@ -8,12 +8,12 @@
 # the SOURCE this library produces, which is the thing this library is responsible for.
 #
 # ★ THE FIGURES ARE THIS FLEET'S, MEASURED. The design cites 1 dotted / 1 solid from the demo spec's
-# own fixture [D §3a.5]; this fleet carries TWELVE declared edges and TWO policy edges, so the
+# own fixture [D §3a.5]; this fleet carries TWELVE declared edges and TWO rule edges, so the
 # figures here are 2 and 12. Inheriting the cited pair would have red against a correct build.
 #
 # THE RED ARM IS IN THIS FILE: the same renderer over an IR whose every edge has been relabelled
 # `declaration`. The dotted count goes to 0 while the solid count RISES, which is what separates
-# "the policy edge lost its style" from "the render produced nothing".
+# "the rule edge lost its style" from "the render produced nothing".
 { admitted, withdrawn, ... }:
 let
   ir = admitted.inspector.facts;
@@ -42,7 +42,7 @@ let
 in
 {
   flake.tests.render = {
-    test-mermaid-dashes-exactly-the-policy-edges = {
+    test-mermaid-dashes-exactly-the-rule-edges = {
       expr = {
         dotted = occ "-\\.->" (mermaid ir);
         solid = occ "-->" (mermaid ir);
@@ -53,7 +53,7 @@ in
       };
     };
 
-    test-withdrawing-the-policy-leaves-one-dashed-edge = {
+    test-withdrawing-the-rule-leaves-one-dashed-edge = {
       expr = {
         dotted = occ "-\\.->" (mermaid irOut);
         solid = occ "-->" (mermaid irOut);
@@ -78,7 +78,7 @@ in
       };
     };
 
-    test-the-policy-edge-is-dashed-by-name-not-by-position = {
+    test-the-rule-edge-is-dashed-by-name-not-by-position = {
       expr = builtins.filter (l: occ "-\\.->" l == 1) (
         builtins.filter builtins.isString (builtins.split "\n" (mermaid ir))
       );
@@ -88,7 +88,7 @@ in
       ];
     };
 
-    test-dot-dashes-exactly-the-policy-edges = {
+    test-dot-dashes-exactly-the-rule-edges = {
       expr = {
         dashed = occ "style=dashed" (dot ir);
         edges = occ "->" (dot ir);

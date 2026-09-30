@@ -1,9 +1,9 @@
 # gen-inspect
 
 The library that **interrogates a materialized gen graph**. Which nodes exist and of what kind,
-which edges are declared, **which a policy program produced and why**, and what reaches what.
+which edges are declared, **which a rule program produced and why**, and what reaches what.
 
-A picture of the same materialization, with the policy's edge visibly distinct, is one output of
+A picture of the same materialization, with the rule's edge visibly distinct, is one output of
 that pipeline — not the ask.
 
 ```nix
@@ -38,7 +38,7 @@ materialized graph is a capability every gen consumer needs, so it ships as end-
 **A fixed menu of demo queries fails that by construction.** The surface takes an **unanticipated**
 query, and every way that query can be wrong is refused **by name, with the known set** — because
 against a raw row source each of those mistakes reads `[]` at exit 0, which is indistinguishable
-from *"the policy produced nothing"*.
+from *"the rule produced nothing"*.
 
 ## The IR contract
 
@@ -51,7 +51,7 @@ nodes   : [ { id; kind; attrs; } ]
 edges   : [ { src; dst; label; origin; } ]
 origins : { "<label>:<src>:<dst>" -> origin }
 origin  : { kind = "declaration"; site; }
-        | { kind = "policy"; derivations = [ { rule = { head; pos; neg; };
+        | { kind = "rule"; derivations = [ { rule = { head; pos; neg; };
                                               fired = [ { atom; verdict; sign; } ]; } ]; }
 tables  : kind -> name -> { name; kind; <attrs splatted>; },  plus `edge`
 kinds   : kind -> { name; }
@@ -127,7 +127,7 @@ entry declares; the graph walk follows it, and so does `reaches`.
 **`why` is one step.** On `edge` it is the IR's `origin`. On `reaches` it lists every rule of the
 query program whose body is true in the model — the same body-checked construction an edge's origin
 uses. Every edge atom a witness names is an IR key, so a reader chains `why` from a reachability row
-to the edge to the policy rule that derived it. **Some one-step witnesses are circular**: on a cycle
+to the edge to the rule that derived it. **Some one-step witnesses are circular**: on a cycle
 `treble ⇄ second`, `reaches:changes:treble:treble` has two derivations, the base fact and one through
 `second` that leads back to itself. Each is a rule whose body is true, but together they are not a
 well-founded proof tree, and choosing one needs stage information the engine does not publish. So
@@ -138,7 +138,7 @@ and a fixed point is only defined over a finite lattice.
 
 ## The example
 
-`examples/fleet/` carries a campanology register whose policy derives **one edge no declaration
+`examples/fleet/` carries a campanology register whose rule derives **one edge no declaration
 states**: `hemony` rings `bourdon`, through two intermediate derivations. `enrolled` is **both a
 declared and a derived label**, which is why the dynamic label set is derived from the program rather
 than hand-written — a hand-written list drops the derived edge with no diagnostic.
@@ -185,7 +185,7 @@ flowchart LR
   hemony -.->|rings| bourdon
 ```
 
-The **two dashed edges are the policy's**; the twelve solid ones are declared. `hemony -.->|rings| bourdon` is the edge no `relations` entry states.
+The **two dashed edges are the rule's**; the twelve solid ones are declared. `hemony -.->|rings| bourdon` is the edge no `relations` entry states.
 
 ```console
 $ nix repl .#
@@ -232,7 +232,7 @@ and `why` for the edge that carries it.
 ```
 
 The label and via doors are the sharp cases: each is a **well-formed query over a known column**.
-Without its door, `WHERE label = 'anvils'` returns `[]` at exit 0 and reads as *"the policy produced
+Without its door, `WHERE label = 'anvils'` returns `[]` at exit 0 and reads as *"the rule produced
 nothing"*, and `via = 'anvils'` answers `hemony` alone, reading as *"hemony reaches nothing"*.
 
 ## Dependencies, and what is not one

@@ -132,8 +132,8 @@ let
       .${n} or [ ];
   };
 
-  # The same endpoint, derived by a policy rule rather than declared.
-  danglingPolicy =
+  # The same endpoint, derived by a rule rather than declared.
+  danglingRule =
     let
       ta = [
         "l:a:b"
@@ -278,17 +278,17 @@ in
       expected = agrees [ "second" "third" "treble" ] false;
     };
 
-    # ★ C-2: the dangling endpoint, declared and policy-derived, on a named label and on `*`.
+    # ★ C-2: the dangling endpoint, declared and rule-derived, on a named label and on `*`.
     test-c2-a-dangling-endpoint-agrees = {
       expr = {
         declaredL = agreement danglingDeclared "l" "a";
         declaredAny = agreement danglingDeclared "*" "a";
-        policyAny = agreement danglingPolicy "*" "a";
+        ruleAny = agreement danglingRule "*" "a";
       };
       expected = {
         declaredL = agrees [ "a" "b" "ghost" ] false;
         declaredAny = agrees [ "a" "b" "ghost" ] false;
-        policyAny = agrees [ "a" "b" "ghost" ] false;
+        ruleAny = agrees [ "a" "b" "ghost" ] false;
       };
     };
 
@@ -359,7 +359,7 @@ in
     };
 
     # The chain closes: every edge atom a reaches witness names is an IR key, whose own `why` is its
-    # origin — so a reader goes from a reachability row, to the edge, to the policy rule.
+    # origin — so a reader goes from a reachability row, to the edge, to the rule.
     test-c3-the-why-chain-closes-onto-ir-origins = {
       expr =
         let
@@ -381,7 +381,7 @@ in
       expected = {
         n = 6;
         allKeyed = true;
-        rings = "policy";
+        rings = "rule";
         column = [ i.facts.origins."rings:hemony:bourdon" ];
       };
     };

@@ -8,7 +8,7 @@
 #   edges   : [ { src; dst; label; origin; } ]
 #   origins : { "<label>:<src>:<dst>" -> origin }   — EVERY model-true atom at an edge label is a key
 #   origin  : { kind = "declaration"; site; }
-#           | { kind = "policy"; derivations = [ { rule  = { head; pos; neg; };
+#           | { kind = "rule"; derivations = [ { rule  = { head; pos; neg; };
 #                                                  fired = [ { atom; verdict; sign; } ]; } ]; }
 #   tables  : kind -> name -> { name; kind; <attrs splatted>; },  plus `edge` — the queryable rows
 #   kinds   : kind -> { name; }                     — what a `WHERE kind = '…'` resolves against
@@ -65,7 +65,7 @@ let
   # calls a witness of UNUSABILITY — an origin naming a rule that did not fire is nothing to look at,
   # and "why is this edge here" is the whole component.
   #
-  # ONE CONSTRUCTION FOR BOTH PROGRAMS: the subject's policy program (an edge's origin) and the query
+  # ONE CONSTRUCTION FOR BOTH PROGRAMS: the subject's rule program (an edge's origin) and the query
   # program `./compile.nix` builds for `reaches`. `keep` is the caller's rule filter; a fact's empty
   # body fires vacuously, and whether a fact counts as a witness is the caller's judgement.
   witnesses =
@@ -111,8 +111,8 @@ let
       prog = subject.program;
       mdl = subject.model;
 
-      # A policy program's FACT is a declaration and carries a declaration origin, so only a rule with
-      # a body is a policy witness. The filter sits HERE, at this call site, and not in `witnesses`.
+      # A rule program's FACT is a declaration and carries a declaration origin, so only a rule with
+      # a body is a rule witness. The filter sits HERE, at this call site, and not in `witnesses`.
       bodied = r: (r.pos or [ ]) != [ ] || (r.neg or [ ]) != [ ];
       witnessesOf = witnesses {
         inherit (prog) rules;
@@ -142,12 +142,12 @@ let
         builtins.filter (l: l != null) (map (r: labelOf r.head) (builtins.filter bodied prog.rules))
       );
 
-      policyEdges = map (
+      ruleEdges = map (
         a:
         atomEdge a
         // {
           origin = {
-            kind = "policy";
+            kind = "rule";
             derivations = derivationsOf a;
           };
         }
@@ -169,7 +169,7 @@ let
         ) (builtins.attrNames relations.${label})
       ) (builtins.attrNames relations);
 
-      edges = declaredEdges ++ policyEdges; # ONE edge list, one construction (ADR-0012)
+      edges = declaredEdges ++ ruleEdges; # ONE edge list, one construction (ADR-0012)
 
       nodes = lib.concatMap (
         kind:
@@ -261,7 +261,7 @@ let
       };
 
   # ── THE DEGENERATE CASE, THROUGH AN EXPLICIT WRAPPER ──
-  # Any gen-graph labeled value is a subject with no policy half. It arrives through a wrapper
+  # Any gen-graph labeled value is a subject with no rule half. It arrives through a wrapper
   # rather than a shape probe so that `materialize`'s missing-field refusal stays NAMED: a probe
   # would silently accept a graph as a scope and answer about an empty program.
   #

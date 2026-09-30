@@ -1,5 +1,5 @@
 {
-  description = "gen-inspect — the library that interrogates a materialized gen graph: which nodes exist and of what kind, which edges are declared, which a policy program produced and why, and what reaches what";
+  description = "gen-inspect — the library that interrogates a materialized gen graph: which nodes exist and of what kind, which edges are declared, which a rule program produced and why, and what reaches what";
 
   # DECLARED, NOT APPLIED (owner-ruled Arm A, 2026-09-16: `den-hoag-4dfsv` §4.2). The library takes
   # its whole substrate as INJECTED VALUES constructed inside the consumer's own evaluation — only

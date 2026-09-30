@@ -1,6 +1,6 @@
 # CELL 3 — THE DYNAMIC EDGE. TWO ASSERTIONS, AND THE SECOND IS ORIGIN/MODEL PARITY.
 #
-# (a) THE EDGE IS FOUND BY ITS LABEL, and its origin says a policy produced it and which rule fired.
+# (a) THE EDGE IS FOUND BY ITS LABEL, and its origin says a rule produced it and which rule fired.
 #
 # (b) ★★ EVERY DERIVATION'S `fired` TUPLE RE-DERIVES ITS HEAD'S VERDICT, in the same run that
 #     produced the edge: each positive literal reads `"true"` and each negative `"false"` under the
@@ -29,7 +29,7 @@ let
 
   verdict = admitted.model.verdict;
 
-  # (b) THE PARITY PREDICATE, over EVERY derivation of EVERY policy edge rather than the one the
+  # (b) THE PARITY PREDICATE, over EVERY derivation of EVERY rule edge rather than the one the
   # cell above names. A parity check on a single hand-picked edge is satisfied by a construction
   # that is right once.
   parityBreaches = builtins.concatMap (
@@ -37,7 +37,7 @@ let
     builtins.concatMap (
       d: builtins.filter (f: f.verdict != (if f.sign == "pos" then "true" else "false")) d.fired
     ) ir.origins."${e.label}:${e.src}:${e.dst}".derivations
-  ) (builtins.filter (e: e.origin.kind == "policy") ir.edges);
+  ) (builtins.filter (e: e.origin.kind == "rule") ir.edges);
 
   # ── THE RED ARM, BUILT. ──
   # A second rule deriving the same head, whose body is FALSE under the model: its negative literal
@@ -118,7 +118,7 @@ in
         {
           src = "hemony";
           dst = "bourdon";
-          origin = "policy";
+          origin = "rule";
         }
       ];
     };
@@ -131,7 +131,7 @@ in
         fired = derivation.fired;
       };
       expected = {
-        kind = "policy";
+        kind = "rule";
         derivations = 1;
         rule = {
           head = "rings:hemony:bourdon";
@@ -175,7 +175,7 @@ in
       ];
     };
 
-    test-withdrawing-the-policy-removes-the-row = {
+    test-withdrawing-the-rule-removes-the-row = {
       expr = withdrawn.inspector.query "SELECT src, dst FROM edge WHERE label = 'rings'";
       expected = [ ];
     };
@@ -190,7 +190,7 @@ in
       expr = builtins.length (
         builtins.concatMap (d: d.fired) (
           builtins.concatMap (e: ir.origins."${e.label}:${e.src}:${e.dst}".derivations) (
-            builtins.filter (e: e.origin.kind == "policy") ir.edges
+            builtins.filter (e: e.origin.kind == "rule") ir.edges
           )
         )
       );

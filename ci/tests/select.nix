@@ -48,8 +48,8 @@ in
     };
 
     # ★ ORIGINS ARE CARRIED FORWARD, NOT RECOMPUTED — the gate-3 seam. A selection that keeps the
-    # policy edge keeps its derivation, whole.
-    test-a-kept-policy-edge-keeps-its-whole-origin = {
+    # rule edge keeps its derivation, whole.
+    test-a-kept-rule-edge-keeps-its-whole-origin = {
       expr =
         let
           keep = i.select (
@@ -72,7 +72,7 @@ in
           identicalToTheSourceIr = o == ir.origins."rings:hemony:bourdon";
         };
       expected = {
-        kind = "policy";
+        kind = "rule";
         derivations = 1;
         fired = 3;
         identicalToTheSourceIr = true;
