@@ -11,7 +11,7 @@
 #
 # Scope: `lib/**.nix` + the root `flake.nix` and `default.nix`. NOT `ci/` — the harness legitimately
 # uses nixpkgs `lib`, including to run this scan.
-{ lib, ... }:
+{ genPrelude, lib, ... }:
 let
   libDir = ../../lib;
 
@@ -90,7 +90,9 @@ let
 
   hits = builtins.concatMap (
     src:
-    builtins.concatMap (tok: lib.optional (lib.hasInfix tok src.text) "${src.name}: ${tok}") forbidden
+    builtins.concatMap (
+      tok: lib.optional (genPrelude.hasInfix tok src.text) "${src.name}: ${tok}"
+    ) forbidden
   ) stripped;
 
   # The nested nixpkgs accessor paths the copy carried, which `lib/extras.nix` replaced with flat
@@ -102,7 +104,10 @@ let
     "lib.attrsets."
   ];
   nestedHits = builtins.concatMap (
-    src: builtins.concatMap (p: lib.optional (lib.hasInfix p src.text) "${src.name}: ${p}") nestedPaths
+    src:
+    builtins.concatMap (
+      p: lib.optional (genPrelude.hasInfix p src.text) "${src.name}: ${p}"
+    ) nestedPaths
   ) stripped;
 in
 {
@@ -129,7 +134,7 @@ in
       expr =
         builtins.length (
           builtins.concatMap (
-            src: builtins.concatMap (tok: lib.optional (lib.hasInfix tok src.text) tok) forbidden
+            src: builtins.concatMap (tok: lib.optional (genPrelude.hasInfix tok src.text) tok) forbidden
           ) sources
         ) > 0;
       expected = true;
