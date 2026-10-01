@@ -6,7 +6,7 @@
 #
 #   nodes   : [ { id; kind; attrs; } ]
 #   edges   : [ { src; dst; label; origin; } ]
-#   origins : { "<label>:<src>:<dst>" -> origin }   — EVERY model-true atom at an edge label is a key
+#   origins : { "<label>:<src>:<dst>" -> origin }   — EVERY edge gen-program's `reached` yields is a key
 #   origin  : { kind = "declaration"; site; }
 #           | { kind = "rule"; derivations = [ { rule  = { head; pos; neg; };
 #                                                  fired = [ { atom; verdict; sign; } ]; } ]; }
@@ -27,36 +27,12 @@
 # checked against a held copy; the project holds neither that survey nor Green, Karvounarakis &
 # Tannen. The SEMIRING IS DELIBERATELY NOT REALIZED AND IS NOT PLANNED: these are records about a
 # run, and nothing here computes with them algebraically.
-{ lib, graph }:
+{
+  lib,
+  graph,
+  program,
+}:
 let
-  # ── ATOM ⇄ EDGE ──
-  # TOTAL BY CONSTRUCTION, and the totality is load-bearing rather than defensive. `unrepresented`
-  # below quantifies over EVERY model-true atom, and a caller's model may hold atoms that are not
-  # edge atoms at all — a two-segment guard atom is the ordinary case. Reading one positionally with
-  # `elemAt … 2` aborts UNNAMED on an index; answering `null` says "this atom names no edge", which
-  # is the same judgement the label scope makes and is why a non-edge atom is SKIPPED rather than
-  # refused.
-  atomEdge =
-    atom:
-    let
-      p = lib.splitString ":" atom;
-    in
-    if lib.length p != 3 then
-      null
-    else
-      {
-        label = lib.elemAt p 0;
-        src = lib.elemAt p 1;
-        dst = lib.elemAt p 2;
-      };
-
-  labelOf =
-    atom:
-    let
-      e = atomEdge atom;
-    in
-    if e == null then null else e.label;
-
   keyOf = e: "${e.label}:${e.src}:${e.dst}";
 
   # ── WITNESSES ARE BODY-CHECKED, NEVER HEAD-MATCHED ──
@@ -104,54 +80,74 @@ let
       missing = builtins.filter (f: !(subject ? ${f})) [
         "register"
         "relations"
-        "program"
+        "declarations"
         "model"
       ];
-      inherit (subject) register relations;
-      prog = subject.program;
+      inherit (subject) register relations declarations;
       mdl = subject.model;
 
       # A rule program's FACT is a declaration and carries a declaration origin, so only a rule with
       # a body is a rule witness. The filter sits HERE, at this call site, and not in `witnesses`.
       bodied = r: (r.pos or [ ]) != [ ] || (r.neg or [ ]) != [ ];
       witnessesOf = witnesses {
-        inherit (prog) rules;
+        rules = map program.rule declarations;
         inherit (mdl) verdict;
       } bodied;
 
-      # ★ `derivations` IS A LIST, with one entry at this gate. Recursion produces multiply-derived
-      #   atoms BY CONSTRUCTION — that is what a fixpoint does — so an origin holding ONE rule would
-      #   freeze an IR that cannot carry the program layer's own output. `fired` is per-derivation
-      #   rather than per-origin because a second derivation has a different body.
-      #
-      # ★ A CALLER-FUNCTION TOTALITY DOOR, not a hypothetical: the model's `interpretation` is
-      #   caller-supplied, and an asserted atom at a dynamic label has no rule at all. Without this
-      #   the construction aborts UNNAMED — measured on that input: "expected a set but found null".
-      derivationsOf =
-        atom:
-        let
-          ws = witnessesOf atom;
-        in
-        if ws == [ ] then throw "gen-inspect: no firing rule derives '${atom}'" else ws;
+      # ★★ THE RULE EDGES ARE gen-program's `reached`, NEVER AN ATOM PARSED HERE. A declaration's
+      #    `label` names the edge its head denotes, `{ from = relata[0]; to = relata[1]; label; }`,
+      #    so an atom stays caller text this library does not split. `reached` refuses BY NAME every
+      #    answer an edge list cannot carry: a head the well-founded model leaves UNDEFINED
+      #    (ADR-0020), a relation still growing, a declaration the model was not solved from. Reading
+      #    `trueAtoms` instead dropped an undefined head at exit 0, because it is in no list of true
+      #    atoms, so no edge and no door ever saw it.
+      reached =
+        (program.ruleEdges {
+          inherit declarations;
+          model = mdl;
+        }).reached;
 
-      # ★★ DYNAMIC LABELS ARE DERIVED FROM THE PROGRAM, NEVER A LITERAL. A hand-kept list drops
-      #    every derived edge whose label is not on it, WITH NO DIAGNOSTIC. In this fleet `enrolled`
-      #    is both a declared and a derived label, and a literal `[ "rings" ]` loses the derived
-      #    `enrolled:hemony:full-circle` at exit 0 — a true edge gone and nothing said.
-      dynamicLabels = lib.unique (
-        builtins.filter (l: l != null) (map (r: labelOf r.head) (builtins.filter bodied prog.rules))
+      # The origin's join back to the heads. An edge is a property of the membership, and gen-program
+      # collapses agreeing heads into one edge, so one key may carry several heads, and its
+      # derivations are all of theirs. `reached ⊆ candidates`, so every reached key has a head here.
+      labelled = builtins.filter (d: d.label != null) (map program.declaration declarations);
+      edgeOf = d: {
+        inherit (d) label;
+        src = builtins.elemAt d.relata 0;
+        dst = builtins.elemAt d.relata 1;
+      };
+      headsByKey = builtins.groupBy (d: keyOf (edgeOf d)) labelled;
+      reachedKeys = lib.unique (
+        map (
+          e:
+          keyOf {
+            inherit (e) label;
+            src = e.from;
+            dst = e.to;
+          }
+        ) reached
       );
 
-      ruleEdges = map (
-        a:
-        atomEdge a
-        // {
-          origin = {
-            kind = "rule";
-            derivations = derivationsOf a;
-          };
-        }
-      ) (builtins.filter (a: atomEdge a != null && witnessesOf a != [ ]) mdl.trueAtoms);
+      # ★ `derivations` IS A LIST. Recursion produces multiply-derived atoms BY CONSTRUCTION — that
+      #   is what a fixpoint does — so an origin holding ONE rule would freeze an IR that cannot carry
+      #   the program layer's own output. `fired` is per-derivation rather than per-origin because a
+      #   second derivation has a different body. A reached edge with no bodied witness is a FACT,
+      #   which is a declaration and is owed a `relations` entry; the door below refuses it if absent.
+      ruleEdges = builtins.filter (e: e.origin.derivations != [ ]) (
+        map (
+          key:
+          let
+            ds = headsByKey.${key};
+          in
+          edgeOf (builtins.head ds)
+          // {
+            origin = {
+              kind = "rule";
+              derivations = builtins.concatMap witnessesOf (lib.unique (map (d: d.head) ds));
+            };
+          }
+        ) reachedKeys
+      );
 
       declaredEdges = lib.concatMap (
         label:
@@ -186,30 +182,26 @@ let
         }) edges
       );
 
-      labels = lib.unique (builtins.attrNames relations ++ dynamicLabels);
+      # ★★ DYNAMIC LABELS ARE THE DECLARATIONS' OWN, NEVER A LITERAL. A hand-kept list drops every
+      #    derived edge whose label is not on it, WITH NO DIAGNOSTIC. In this fleet `enrolled` is both
+      #    a declared and a derived label, and a literal `[ "rings" ]` loses the derived
+      #    `enrolled:hemony:full-circle` at exit 0 — a true edge gone and nothing said.
+      labels = lib.unique (builtins.attrNames relations ++ map (d: d.label) labelled);
 
-      # ★★ THE DOOR: every model-true atom AT AN EDGE LABEL is an IR key, or it is refused BY NAME.
-      #    SCOPED BY LABEL because an atom at a label the subject does not publish is a control atom
-      #    and names no edge — the withdrawn arm asserts exactly one. Containment and not equality,
-      #    because the IR also holds declared edges the program never mentions.
+      # ★★ THE DOOR: every reached edge is an IR key, or it is refused BY NAME. Containment and not
+      #    equality, because the IR also holds declared edges the program never mentions.
       #
       # ★ FORCE THE WHOLE IR, DO NOT COUNT IT. `builtins.length` forces the list SPINE and not one
-      #   origin, so a stray-atom build reads its full edge count at exit 0 under a count assertion;
+      #   origin, so a stray-edge build reads its full edge count at exit 0 under a count assertion;
       #   `deepSeq` is what makes it exit 1. That is a property of the CONSUMER's force, stated here
       #   because this door is what the force is supposed to reach.
-      unrepresented = builtins.filter (
-        a:
-        let
-          l = labelOf a;
-        in
-        l != null && builtins.elem l labels && !(origins ? ${a})
-      ) mdl.trueAtoms;
+      unrepresented = builtins.filter (k: !(origins ? ${k})) reachedKeys;
 
       checked =
         if unrepresented == [ ] then
           origins
         else
-          throw "gen-inspect: model-true atom(s) with no IR edge: ${builtins.concatStringsSep ", " unrepresented}";
+          throw "gen-inspect: reached edge(s) with neither a firing rule nor a declared relation: ${builtins.concatStringsSep ", " unrepresented}";
 
       # ── THE QUERYABLE PROJECTION: `id` becomes `name`, `attrs` splat, `kind` retained. ──
       tables =
@@ -290,9 +282,9 @@ let
       perLabel = checked.perLabel;
       kind = checked.kind or "vertex";
     in
-    # `program` and `model` below are static — neither reads `checked` — so without this `seq` the
-    # refusal would fire only for a caller who happens to force `register`/`relations`, never for one
-    # who reads `program`/`model` alone or merely applies the door to WHNF (measured: `tryEval
+    # `declarations` and `model` below are static — neither reads `checked` — so without this `seq`
+    # the refusal would fire only for a caller who happens to force `register`/`relations`, never for
+    # one who reads `declarations`/`model` alone or merely applies the door to WHNF (measured: `tryEval
     # (builtins.seq (graphSubject bad) null)` answered `success` with no `seq` here). Forcing `checked`
     # at application makes the refusal unconditional on what the caller later reads.
     builtins.seq checked {
@@ -303,18 +295,15 @@ let
       relations = lib.mapAttrs (
         _label: acc: lib.listToAttrs (map (n: lib.nameValuePair n (acc n)) nodes)
       ) perLabel;
-      program.rules = [ ];
-      model = {
-        trueAtoms = [ ];
-        verdict = _: "false";
-      };
+      # No declaration is labelled, so gen-program's `reached` is `[ ]` without reading the model.
+      declarations = [ ];
+      model.verdict = _: "false";
     };
 in
 {
   inherit
     materialize
     graphSubject
-    atomEdge
     keyOf
     witnesses
     ;

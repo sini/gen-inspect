@@ -36,41 +36,80 @@ let
   knownTables = "belfry, chime, edge, peal, reaches, ringer, tocsin";
 
   # ── THE FIXTURE FOR THE IR DOOR ──
-  # A model-true atom AT A PUBLISHED LABEL that no rule derives and no relation declares. `housed` is
-  # a declared label of the fleet, so the atom is inside the door's scope; nothing produces an edge
-  # for it, so it has no IR key. This is the defect a hand-written dynamic-label list creates, driven
-  # here WITHOUT touching `lib/materialize.nix`.
-  strayProgram = genProgram.program {
-    frozen = [
-      "hemony"
-      "bourdon"
-    ];
-    declarations = [
-      {
-        head = "admits:bourdon:hemony";
-        relata = [
-          "bourdon"
-          "hemony"
-        ];
-      }
-    ];
-  };
+  # A reached edge that no rule derives and no relation declares: a labelled FACT at the published
+  # label `housed`. gen-program reaches it, and nothing gives it an IR key. This is the defect a
+  # hand-written dynamic-label list creates, driven here WITHOUT touching `lib/materialize.nix`.
+  strayDeclarations = [
+    {
+      head = "housed:bourdon:campanile";
+      relata = [
+        "bourdon"
+        "campanile"
+      ];
+      label = "housed";
+    }
+  ];
   strayModel = genProgram.model {
     prior = null;
-    program = strayProgram;
+    program = genProgram.program {
+      frozen = [
+        "bourdon"
+        "campanile"
+      ];
+      declarations = strayDeclarations;
+    };
     complete = true;
-    interpretation = [
-      {
-        atom = "housed:bourdon:campanile";
-        verdict = "true";
-      }
-    ];
+    interpretation = [ ];
   };
   strayIr = genInspect.materialize {
     register.tocsin.bourdon = { };
     relations.housed.bourdon = [ ];
-    program = strayProgram;
+    declarations = strayDeclarations;
     model = strayModel;
+  };
+
+  # ── THE FIXTURE FOR THE UNDEFINED HEAD ──
+  # A negative cycle, `reach:a:b :- not held:a:b` and `held:a:b :- not reach:a:b`: the well-founded
+  # model leaves `reach:a:b` UNDEFINED (ADR-0020). Its control, the same fixture without `held`, is in
+  # `./tests/ir.nix`.
+  cycleDeclarations = [
+    {
+      head = "reach:a:b";
+      neg = [ "held:a:b" ];
+      relata = [
+        "a"
+        "b"
+      ];
+      label = "reach";
+    }
+    {
+      head = "held:a:b";
+      neg = [ "reach:a:b" ];
+      relata = [
+        "a"
+        "b"
+      ];
+    }
+  ];
+  cycleIr = genInspect.materialize {
+    register.v = {
+      a = { };
+      b = { };
+    };
+    relations = { };
+    declarations = cycleDeclarations;
+    model = genProgram.model {
+      program = genProgram.program {
+        frozen = [
+          "a"
+          "b"
+        ];
+        declarations = cycleDeclarations;
+      };
+      interpretation = [ ];
+      prior = null;
+      complete = true;
+    };
   };
 in
 {
@@ -158,14 +197,22 @@ in
       expectedError.msg = exactly "gen-inspect: 'rings:hemony' is neither an IR edge key nor a reaches atom";
     };
 
-    # ── DOOR 6: ★ A MODEL-TRUE ATOM AT AN EDGE LABEL WITH NO IR EDGE ──
-    # THE DOOR THAT MAKES THE DERIVED LABEL SET SELF-CHECKING. Driven from a model rather than by
-    # editing the library: an atom asserted true at a PUBLISHED label that nothing produces an edge
-    # for. Without this the build reads its full edge count at exit 0 and answers a question about
+    # ── DOOR 6: ★ A REACHED EDGE WITH NO IR EDGE ──
+    # THE DOOR THAT MAKES THE DERIVED LABEL SET SELF-CHECKING. Driven from a subject rather than by
+    # editing the library: an edge gen-program reaches at a PUBLISHED label that nothing gives an IR
+    # key. Without this the build reads its full edge count at exit 0 and answers a question about
     # that label with a true edge missing and nothing said.
-    test-a-model-true-atom-with-no-ir-edge-is-refused-by-name = {
+    test-a-reached-edge-with-no-ir-edge-is-refused-by-name = {
       expr = builtins.deepSeq strayIr.origins strayIr;
-      expectedError.msg = exactly "gen-inspect: model-true atom(s) with no IR edge: housed:bourdon:campanile";
+      expectedError.msg = exactly "gen-inspect: reached edge(s) with neither a firing rule nor a declared relation: housed:bourdon:campanile";
+    };
+
+    # ── DOOR 10: ★ AN UNDEFINED HEAD IS REFUSED BY NAME, NOT DROPPED ──
+    # Read off `trueAtoms`, this fixture's IR had no edge and forced at exit 0: an undefined atom is
+    # in no list of true atoms. gen-program's `reached` refuses it, naming the head.
+    test-an-undefined-head-is-refused-by-name = {
+      expr = builtins.deepSeq cycleIr.edges cycleIr;
+      expectedError.msg = exactly "gen-program.ruleEdges: 'reach:a:b' is UNDEFINED (U); an edge has no third value, so the membership can be carried into the graph neither as an edge nor as its absence, and is refused rather than collapsed. Read its answer through the model's `resolve` and handle 'U'";
     };
 
     # ── DOOR 8: ★ A QUALIFIER NO FROM/JOIN ITEM DECLARES ──
@@ -195,14 +242,14 @@ in
     # that is neither reaches this refusal.
     test-a-non-scope-is-refused-naming-every-missing-field = {
       expr = genInspect.mkInspector { register = { }; };
-      expectedError.msg = exactly "gen-inspect: not an evaluated scope; missing field(s): relations, program, model";
+      expectedError.msg = exactly "gen-inspect: not an evaluated scope; missing field(s): relations, declarations, model";
     };
 
     test-a-partial-scope-names-only-what-is-missing = {
       expr = genInspect.mkInspector {
         register = { };
         relations = { };
-        program.rules = [ ];
+        declarations = [ ];
       };
       expectedError.msg = exactly "gen-inspect: not an evaluated scope; missing field(s): model";
     };

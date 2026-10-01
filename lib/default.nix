@@ -38,7 +38,8 @@
   scope,
   # `program` is gen-program APPLIED — like the other four, a value constructed in the consumer's own
   # evaluation. `./compile.nix` builds each `reaches` question as its declarations and solves it with
-  # `program.model`, which calls gen-scope's `solve`.
+  # `program.model`, which calls gen-scope's `solve`. `./materialize.nix` takes its rule edges from
+  # `program.ruleEdges`, which reads each declaration's own `label`.
   program,
 }:
 let
@@ -51,7 +52,7 @@ let
     inherit lib;
     genSelect = select;
   };
-  materialize = import ./materialize.nix { inherit lib graph; };
+  materialize = import ./materialize.nix { inherit lib graph program; };
   selecting = import ./select.nix { inherit lib graph; };
   compile = import ./compile.nix {
     inherit lib program;

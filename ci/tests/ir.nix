@@ -1,17 +1,25 @@
 # CELL 1 — THE IR, AND IT ASSERTS THE DOOR AS WELL AS THE FIGURES.
 #
-# ★★ THE LOAD-BEARING ASSERTION IS `trueAtoms ⊆ attrNames origins`, SCOPED TO EDGE LABELS. Every
-# model-true atom at a label the subject publishes is an IR key, or `materialize` refuses BY NAME.
-# It is CONTAINMENT and not equality because the IR also holds twelve declared edges the program
-# never mentions, and it is SCOPED BY LABEL because an atom at a label the subject does not publish
-# — the `silenced` control atom — names no edge.
+# ★★ THE LOAD-BEARING ASSERTION IS `reached ⊆ attrNames origins`. Every edge gen-program's
+# `ruleEdges` reaches is an IR key, or `materialize` refuses BY NAME. It is CONTAINMENT and not
+# equality because the IR also holds declared edges the program never mentions. The `silenced`
+# control atom carries no label, so it names no edge.
+#
+# ★★ AN UNDEFINED HEAD IS REFUSED, NOT DROPPED. The refusal is `ci/tests-error.nix`'s; its CONTROL is
+# here: the same fixture with the contest removed resolves the head `true`, and the edge is in the IR.
 #
 # ★ FORCE THE WHOLE IR, DO NOT COUNT IT. `builtins.length` forces the list SPINE and not one origin,
 # so a stray-atom build reads its full edge count at exit 0 under a count assertion; `deepSeq` is
 # what makes it exit 1. Every cell below that names a figure therefore reads it off a `deepSeq`-ed
 # IR rather than off an unforced one — `test-the-whole-ir-forces` is the cell that does the forcing
 # and the rest read figures from the value it forced.
-{ admitted, withdrawn, ... }:
+{
+  admitted,
+  withdrawn,
+  genInspect,
+  genProgram,
+  ...
+}:
 let
   ir = admitted.inspector.facts;
   irOut = withdrawn.inspector.facts;
@@ -34,6 +42,50 @@ let
   originKind = k: x: builtins.length (builtins.filter (e: e.origin.kind == k) x.edges);
   keysOf =
     x: map (e: "${e.label}:${e.src}:${e.dst}") (builtins.filter (e: e.origin.kind == "rule") x.edges);
+
+  # The negative-cycle fixture of `ci/tests-error.nix` WITHOUT its contest: `reach:a:b :- not held:a:b`
+  # and no rule for `held:a:b`, so the head is `true` rather than UNDEFINED.
+  uncontested =
+    let
+      declarations = [
+        {
+          head = "reach:a:b";
+          neg = [ "held:a:b" ];
+          relata = [
+            "a"
+            "b"
+          ];
+          label = "reach";
+        }
+      ];
+      model = genProgram.model {
+        program = genProgram.program {
+          frozen = [
+            "a"
+            "b"
+          ];
+          inherit declarations;
+        };
+        interpretation = [ ];
+        prior = null;
+        complete = true;
+      };
+    in
+    {
+      inherit model;
+      ir = genInspect.materialize {
+        register.v = {
+          a = { };
+          b = { };
+        };
+        relations = { };
+        inherit declarations model;
+      };
+    };
+  reachedOf =
+    declarations: model:
+    map (e: "${e.label}:${e.from}:${e.to}")
+      (genProgram.ruleEdges { inherit declarations model; }).reached;
 in
 {
   flake.tests.ir = {
@@ -99,16 +151,30 @@ in
 
     # THE CONTAINMENT, ASSERTED RATHER THAN INFERRED FROM THE COUNTS. The counts above would agree
     # with a build whose origins keyed twelve declared edges and two arbitrary strings.
-    test-every-model-true-atom-at-a-published-label-is-an-ir-key = {
-      expr = builtins.filter (
-        a:
-        let
-          e = admitted.inspector.facts;
-          p = builtins.filter builtins.isString (builtins.split ":" a);
-        in
-        builtins.length p == 3 && builtins.elem (builtins.head p) e.labels && !(e.origins ? ${a})
-      ) admitted.model.trueAtoms;
+    test-every-reached-edge-is-an-ir-key = {
+      expr = builtins.filter (k: !(ir.origins ? ${k})) (reachedOf admitted.declarations admitted.model);
       expected = [ ];
+    };
+
+    # The containment above quantifies over something: the fleet reaches five edges, three facts and
+    # two rule edges.
+    test-the-fleet-reaches-edges = {
+      expr = builtins.length (reachedOf admitted.declarations admitted.model);
+      expected = 5;
+    };
+
+    # ── THE CONTROL FOR THE UNDEFINED-HEAD REFUSAL ──
+    test-an-uncontested-head-is-true-and-its-edge-is-a-rule-edge = {
+      expr = {
+        verdict = uncontested.model.verdict "reach:a:b";
+        edges = map (e: "${e.label}:${e.src}:${e.dst}:${e.origin.kind}") uncontested.ir.edges;
+        forced = forced uncontested.ir;
+      };
+      expected = {
+        verdict = "true";
+        edges = [ "reach:a:b:rule" ];
+        forced = true;
+      };
     };
 
     test-labels-and-tables = {

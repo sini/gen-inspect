@@ -35,8 +35,8 @@
 # The relation is handed to the executor AS A TABLE, so `WHERE`, `JOIN`, projection, `ORDER BY` and
 # `LIMIT` serve it unchanged — Datafun's "relational algebra plus fixed points", with the fixed point
 # in the engine and the algebra where it already was. A `reaches` row is a QUERY relation and never
-# an IR edge. The atom namespaces are disjoint by segment count: an edge atom has three segments and
-# a `reaches` atom four, and `./materialize.nix`'s `atomEdge` reads only the first.
+# an IR edge: `./materialize.nix` takes rule edges only from labelled subject declarations, and the
+# query program is never the subject.
 #
 # ── `why` ──
 # On `edge`, `why` is the IR's own `origin` record. On `reaches` it is `{ kind = "query";

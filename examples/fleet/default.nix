@@ -13,8 +13,9 @@
 # ★★ AND `enrolled` IS BOTH A DECLARED AND A DERIVED LABEL, WHICH IS THE SECOND POINT. `hemony` is
 # DECLARED enrolled in `chiming` and DERIVED enrolled in `full-circle`; the IR carries both under one
 # label, each with its own origin. A construction that filtered rule edges through a hand-written
-# label list would drop the derived one WITH NO DIAGNOSTIC — the reason `materialize` derives the
-# dynamic label set from the program and refuses a model-true atom with no IR edge BY NAME.
+# label list would drop the derived one WITH NO DIAGNOSTIC — the reason `materialize` takes the
+# dynamic label set from the declarations' own labels and refuses a reached edge with no IR edge BY
+# NAME.
 #
 # `silenced` is a CONTROL ATOM at a label this register does not publish. Asserting it withdraws the
 # rule's conclusion, which is the fixture's second arm: the same subject with one edge gone.
@@ -90,9 +91,13 @@ let
   };
 
   # ── THE RULE: A TRANSITIVE GRANT ──
+  # Each declaration's `label` names the edge its head denotes, `{ from = relata[0]; to = relata[1];
+  # }`: gen-program's `ruleEdges` reads it there, and the atom string is never split. The facts are
+  # labelled too, because they are the same edges `relations` declares.
   declarations = [
     {
       head = "enrolled:hemony:chiming";
+      label = "enrolled";
       relata = [
         "hemony"
         "chiming"
@@ -100,6 +105,7 @@ let
     }
     {
       head = "absorbs:full-circle:chiming";
+      label = "absorbs";
       relata = [
         "full-circle"
         "chiming"
@@ -107,6 +113,7 @@ let
     }
     {
       head = "admits:bourdon:full-circle";
+      label = "admits";
       relata = [
         "bourdon"
         "full-circle"
@@ -114,6 +121,7 @@ let
     }
     {
       head = "enrolled:hemony:full-circle";
+      label = "enrolled";
       pos = [
         "enrolled:hemony:chiming"
         "absorbs:full-circle:chiming"
@@ -125,6 +133,7 @@ let
     }
     {
       head = "rings:hemony:bourdon";
+      label = "rings";
       pos = [
         "enrolled:hemony:full-circle"
         "admits:bourdon:full-circle"
@@ -177,7 +186,7 @@ let
     inherit
       register
       relations
-      program
+      declarations
       model
       ;
   };
@@ -187,6 +196,7 @@ in
     subject
     register
     relations
+    declarations
     program
     model
     ;

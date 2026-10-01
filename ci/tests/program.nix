@@ -19,6 +19,7 @@
   admitted,
   withdrawn,
   genInspect,
+  genProgram,
   genGraph,
   genPrelude,
   ...
@@ -135,9 +136,24 @@ let
   # The same endpoint, derived by a rule rather than declared.
   danglingRule =
     let
-      ta = [
-        "l:a:b"
-        "l:b:ghost"
+      declarations = [
+        {
+          head = "l:a:b";
+          relata = [
+            "a"
+            "b"
+          ];
+          label = "l";
+        }
+        {
+          head = "l:b:ghost";
+          pos = [ "l:a:b" ];
+          relata = [
+            "b"
+            "ghost"
+          ];
+          label = "l";
+        }
       ];
     in
     genInspect.mkInspector {
@@ -146,15 +162,19 @@ let
         b = { };
       };
       relations.l.a = [ "b" ];
-      program.rules = [
-        {
-          head = "l:b:ghost";
-          pos = [ "l:a:b" ];
-        }
-      ];
-      model = {
-        trueAtoms = ta;
-        verdict = x: if builtins.elem x ta then "true" else "false";
+      inherit declarations;
+      model = genProgram.model {
+        program = genProgram.program {
+          frozen = [
+            "a"
+            "b"
+            "ghost"
+          ];
+          inherit declarations;
+        };
+        interpretation = [ ];
+        prior = null;
+        complete = true;
       };
     };
 

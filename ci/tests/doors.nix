@@ -79,8 +79,8 @@ in
     test-graphsubject-valid-call-is-unchanged = {
       expr = builtins.attrNames (genInspect.graphSubject validArgs);
       expected = [
+        "declarations"
         "model"
-        "program"
         "register"
         "relations"
       ];

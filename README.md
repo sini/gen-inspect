@@ -18,7 +18,7 @@ genInspect = import gen-inspect/lib {
 i = genInspect.mkInspector {
   register  = { … };   # kind -> name -> attrs
   relations = { … };   # label -> src -> [ dst ]
-  program   = …;       # a gen-program program
+  declarations = …;    # gen-program declarations; one carrying `label` denotes an edge
   model     = …;       # its model, already solved by gen-scope
 };
 
@@ -49,7 +49,7 @@ than an ad-hoc filter set.
 ```
 nodes   : [ { id; kind; attrs; } ]
 edges   : [ { src; dst; label; origin; } ]
-origins : { "<label>:<src>:<dst>" -> origin }
+origins : { "<label>:<src>:<dst>" -> origin }   every edge gen-program's `reached` yields is a key
 origin  : { kind = "declaration"; site; }
         | { kind = "rule"; derivations = [ { rule = { head; pos; neg; };
                                               fired = [ { atom; verdict; sign; } ]; } ]; }
@@ -61,8 +61,12 @@ graph   : the gen-graph labeled value over the SAME edge list
 
 **`origin` is constructed at materialization, and the engine is not its source.** gen-scope's
 `provenance` is a condensation-depth stamp, not per-atom provenance. There is no capture stage and
-nothing is instrumented: the program value and the model verdicts are both in hand, which is what
+nothing is instrumented: the declarations and the model verdicts are both in hand, which is what
 makes origin derivable at all.
+
+**The rule edges are gen-program's `ruleEdges { declarations, model }.reached`, never an atom parsed
+here.** A declaration's `label` names the edge its head denotes, `{ from = relata[0]; to = relata[1]; label; }`. `reached` refuses by name every answer an edge list cannot carry, so a head the
+well-founded model leaves **undefined** is refused rather than dropped.
 
 **A witness is body-checked, never head-matched.** Van Gelder, Ross & Schlipf 1991 Def 3.3: an atom
 is derived iff some rule has it as head **and every body literal is true in the model**. A head match
@@ -140,8 +144,8 @@ and a fixed point is only defined over a finite lattice.
 
 `examples/fleet/` carries a campanology register whose rule derives **one edge no declaration
 states**: `hemony` rings `bourdon`, through two intermediate derivations. `enrolled` is **both a
-declared and a derived label**, which is why the dynamic label set is derived from the program rather
-than hand-written — a hand-written list drops the derived edge with no diagnostic.
+declared and a derived label**, which is why the dynamic label set is taken from the declarations'
+own labels rather than hand-written — a hand-written list drops the derived edge with no diagnostic.
 
 ### The three human entries
 
