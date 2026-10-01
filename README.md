@@ -65,8 +65,8 @@ nothing is instrumented: the declarations and the model verdicts are both in han
 makes origin derivable at all.
 
 **The rule edges are gen-program's `ruleEdges { declarations, model }.reached`, never an atom parsed
-here.** A declaration's `label` names the edge its head denotes, `{ from = relata[0]; to = relata[1]; label; }`. `reached` refuses by name every answer an edge list cannot carry, so a head the
-well-founded model leaves **undefined** is refused rather than dropped.
+here.** A declaration's `label` names the edge its head denotes, `{ from = relata[0]; to = relata[1]; label; }`. `reached` refuses by name every answer an edge list cannot carry, so a labelled head
+the well-founded model leaves **undefined** is refused rather than dropped.
 
 **A witness is body-checked, never head-matched.** Van Gelder, Ross & Schlipf 1991 Def 3.3: an atom
 is derived iff some rule has it as head **and every body literal is true in the model**. A head match

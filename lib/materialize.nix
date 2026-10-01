@@ -19,7 +19,7 @@
 # gen-scope's `provenance` is a CONDENSATION-DEPTH STAMP, not per-atom provenance: measured at the
 # hub, `scope.provenanceFor 1` ⇒ `[]` and `scope.provenanceFor 999999` ⇒ one entry reading "the
 # input exceeds the engine's benchmark-verified condensation depth". So there is no capture stage
-# and nothing is instrumented; the program value and the model verdicts are BOTH in hand at
+# and nothing is instrumented; the declarations and the model verdicts are BOTH in hand at
 # materialization, which is what makes origin derivable at all.
 #
 # ★ THE PROVENANCE RIDER TRAVELS WITH THE CITATION. `origins` is why/derivation provenance IN THE

@@ -26,7 +26,7 @@ let
   answers = e: (builtins.tryEval (builtins.deepSeq e null)).success;
 
   # ★ THE SHARPER BAR: the refusal must fire ON APPLICATION, not only when a caller happens to force
-  # the one branch (`register`/`relations`) that reads `checked` — `program`/`model` are static and
+  # the one branch (`register`/`relations`) that reads `checked` — `declarations`/`model` are static and
   # never would have tripped it. Measured before `lib/materialize.nix`'s `builtins.seq checked { … }`
   # was added: `tryEval (seq (graphSubject bad) null)` answered `success` (a bad record silently
   # admitted under WHNF alone). `seq`, no later args, no field read, is the whole predicate.
