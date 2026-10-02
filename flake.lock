@@ -2,6 +2,21 @@
   "nodes": {
     "gen-algebra": {
       "locked": {
+        "lastModified": 1790925189,
+        "narHash": "sha256-3kq9rEEaIh1FO2ydsfpwTGQhRrAHDV5BAAtEzdTq2Pw=",
+        "owner": "sini",
+        "repo": "gen-algebra",
+        "rev": "18238b1c08d943dd7288b09e40c0b1d865e66d9d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "sini",
+        "repo": "gen-algebra",
+        "type": "github"
+      }
+    },
+    "gen-algebra_2": {
+      "locked": {
         "lastModified": 1790902148,
         "narHash": "sha256-vT2Zp60Y01Ky/+ZQvCsmkIOHlqfdNN4NJjc3icGdYko=",
         "owner": "sini",
@@ -50,6 +65,21 @@
         "type": "github"
       }
     },
+    "gen-identity_2": {
+      "locked": {
+        "lastModified": 1790902094,
+        "narHash": "sha256-EPlPgOO6fByk5MGmApwCfxAJf+MGlSppH4c+tpOns5k=",
+        "owner": "sini",
+        "repo": "gen-identity",
+        "rev": "05cc8171b82328799731dbfee5ef36838d910761",
+        "type": "github"
+      },
+      "original": {
+        "owner": "sini",
+        "repo": "gen-identity",
+        "type": "github"
+      }
+    },
     "gen-prelude": {
       "locked": {
         "lastModified": 1790902094,
@@ -67,6 +97,8 @@
     },
     "gen-program": {
       "inputs": {
+        "gen-algebra": "gen-algebra",
+        "gen-identity": "gen-identity",
         "gen-prelude": [
           "gen-prelude"
         ],
@@ -75,11 +107,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790902388,
-        "narHash": "sha256-GEvI205fAw1b2KAOK0NldTAz6EbIor/dCgXm6mTLtec=",
+        "lastModified": 1790936307,
+        "narHash": "sha256-23xI7vvew+Y7SAi8UqADytQBpw8CTnfZ0UgGZ6z0mPc=",
         "owner": "sini",
         "repo": "gen-program",
-        "rev": "c913d05ec9725617a3751c07a38f515a1b5abdc3",
+        "rev": "04c91612c33aaa453c7c89a3f9204b8456ee28bd",
         "type": "github"
       },
       "original": {
@@ -93,7 +125,7 @@
         "gen-graph": [
           "gen-graph"
         ],
-        "gen-identity": "gen-identity",
+        "gen-identity": "gen-identity_2",
         "gen-prelude": [
           "gen-prelude"
         ]
@@ -114,7 +146,7 @@
     },
     "gen-select": {
       "inputs": {
-        "gen-algebra": "gen-algebra"
+        "gen-algebra": "gen-algebra_2"
       },
       "locked": {
         "lastModified": 1790928564,

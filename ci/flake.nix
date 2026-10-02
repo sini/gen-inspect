@@ -23,6 +23,7 @@
     gen-program.url = "github:sini/gen-program";
     gen-program.inputs.gen-prelude.follows = "gen-prelude";
     gen-program.inputs.gen-scope.follows = "gen-scope";
+    gen-program.inputs.gen-identity.follows = "gen-scope/gen-identity";
   };
 
   outputs =
@@ -38,7 +39,11 @@
       # The application the hub's `lib/hubSubstrate.nix` performs for `program`, and the ONE
       # gen-program instance this oracle holds: the library's program route and the fleet fixture
       # both take it.
-      genProgram = inputs.gen-program.lib { inherit prelude scope; };
+      genProgram = inputs.gen-program.lib {
+        inherit prelude scope;
+        algebra = inputs.gen-program.inputs.gen-algebra.lib;
+        identity = inputs.gen-scope.inputs.gen-identity.lib;
+      };
       genInspect = import ../lib {
         inherit
           prelude
