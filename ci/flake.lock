@@ -304,11 +304,11 @@
         "gen-algebra": "gen-algebra"
       },
       "locked": {
-        "lastModified": 1790904877,
-        "narHash": "sha256-ixaNaYR+TSeBTRyXXWBXSx5tfR1EyqlIdKOH64K814M=",
+        "lastModified": 1790918954,
+        "narHash": "sha256-ToJc296jWUpm24uuxW14ept5x9znF76VHhmUVN6BL8U=",
         "owner": "sini",
         "repo": "gen-select",
-        "rev": "2a11f025357a8a760993f859a6b8562c0c98604d",
+        "rev": "1977e5149b10e1d1dfb4664cfc56cd3c86919fb9",
         "type": "github"
       },
       "original": {
