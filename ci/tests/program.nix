@@ -164,14 +164,11 @@ let
       relations.l.a = [ "b" ];
       inherit declarations;
       model = genProgram.model {
-        program = genProgram.program {
-          frozen = [
-            "a"
-            "b"
-            "ghost"
-          ];
-          inherit declarations;
-        };
+        program = genProgram.program [
+          "a"
+          "b"
+          "ghost"
+        ] declarations;
         interpretation = [ ];
         prior = null;
         complete = true;
