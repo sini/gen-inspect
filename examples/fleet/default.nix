@@ -149,18 +149,15 @@ let
   # ★ `frozen` MUST NAME EVERY RELATUM, or the construction exits 1 (ADR-0033). A relatum is an
   #   IDENTIFIER resolved against the frozen set, and a rule's atoms are membership facts — two
   #   universes, and collapsing them would make an identifier derivable.
-  program = genProgram.program {
-    frozen = [
-      "hemony"
-      "rudhall"
-      "mears"
-      "chiming"
-      "full-circle"
-      "bourdon"
-      "tenor"
-    ];
-    inherit declarations;
-  };
+  program = genProgram.program [
+    "hemony"
+    "rudhall"
+    "mears"
+    "chiming"
+    "full-circle"
+    "bourdon"
+    "tenor"
+  ] declarations;
 
   model = genProgram.model {
     inherit program;

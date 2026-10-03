@@ -178,11 +178,9 @@ let
             e.dst
           ];
         }) (over via);
-      prog = program.program {
-        frozen = domain ir;
-        declarations =
-          edgeFacts ++ builtins.concatMap (via: builtins.concatMap (perSource via) srcSet) viaSet;
-      };
+      prog = program.program (domain ir) (
+        edgeFacts ++ builtins.concatMap (via: builtins.concatMap (perSource via) srcSet) viaSet
+      );
       model = program.model {
         prior = null;
         program = prog;

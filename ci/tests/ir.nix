@@ -59,13 +59,10 @@ let
         }
       ];
       model = genProgram.model {
-        program = genProgram.program {
-          frozen = [
-            "a"
-            "b"
-          ];
-          inherit declarations;
-        };
+        program = genProgram.program [
+          "a"
+          "b"
+        ] declarations;
         interpretation = [ ];
         prior = null;
         complete = true;
@@ -84,8 +81,7 @@ let
     };
   reachedOf =
     declarations: model:
-    map (e: "${e.label}:${e.from}:${e.to}")
-      (genProgram.ruleEdges { inherit declarations model; }).reached;
+    map (e: "${e.label}:${e.from}:${e.to}") (genProgram.ruleEdges model declarations).reached;
 in
 {
   flake.tests.ir = {

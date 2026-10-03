@@ -51,13 +51,10 @@ let
   ];
   strayModel = genProgram.model {
     prior = null;
-    program = genProgram.program {
-      frozen = [
-        "bourdon"
-        "campanile"
-      ];
-      declarations = strayDeclarations;
-    };
+    program = genProgram.program [
+      "bourdon"
+      "campanile"
+    ] strayDeclarations;
     complete = true;
     interpretation = [ ];
   };
@@ -99,13 +96,10 @@ let
     relations = { };
     declarations = cycleDeclarations;
     model = genProgram.model {
-      program = genProgram.program {
-        frozen = [
-          "a"
-          "b"
-        ];
-        declarations = cycleDeclarations;
-      };
+      program = genProgram.program [
+        "a"
+        "b"
+      ] cycleDeclarations;
       interpretation = [ ];
       prior = null;
       complete = true;

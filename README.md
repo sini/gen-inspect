@@ -64,7 +64,7 @@ graph   : the gen-graph labeled value over the SAME edge list
 nothing is instrumented: the declarations and the model verdicts are both in hand, which is what
 makes origin derivable at all.
 
-**The rule edges are gen-program's `ruleEdges { declarations, model }.reached`, never an atom parsed
+**The rule edges are gen-program's `(ruleEdges model declarations).reached`, never an atom parsed
 here.** A declaration's `label` names the edge its head denotes, `{ from = relata[0]; to = relata[1]; label; }`. `reached` refuses by name every answer an edge list cannot carry, so a labelled head
 the well-founded model leaves **undefined** is refused rather than dropped.
 

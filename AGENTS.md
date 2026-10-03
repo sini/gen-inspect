@@ -38,7 +38,7 @@ so an APPLIED output here would abort every hub evaluation with `attempt to call
 - **`materialize.nix`** — the IR contract, and its one construction. `origin` is built here from
   the subject's declarations × `model.verdict`, because gen-scope's `provenance` is a
   **condensation-depth stamp** and not per-atom provenance. Its rule edges are gen-program's
-  `ruleEdges { declarations, model }.reached`, never a parsed atom, so an UNDEFINED head refuses by
+  `(ruleEdges model declarations).reached`, never a parsed atom, so an UNDEFINED head refuses by
   name (gen-program's refusal). Carries two doors of its own: the missing-field refusal and the
   reached-edge-with-no-IR-edge refusal.
 - **`extras.nix`** — gen-prelude plus the seven names the copied parser needs. **Not nixpkgs `lib`.**

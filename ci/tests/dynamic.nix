@@ -44,52 +44,52 @@ let
   # `silenced:hemony:bourdon` is asserted true. A HEAD MATCH reports this rule in a field named
   # `fired`; the body check does not. The two arms are run over the same program in the same
   # evaluation, so what separates them is the predicate and nothing else.
-  headMatchProgram = genProgram.program {
-    frozen = [
-      "hemony"
-      "bourdon"
-      "full-circle"
-      "chiming"
-      "rudhall"
-      "mears"
-      "tenor"
-    ];
-    declarations = [
-      {
-        head = "admits:bourdon:full-circle";
-        relata = [
-          "bourdon"
-          "full-circle"
-        ];
-      }
-      {
-        head = "silenced:hemony:bourdon";
-        relata = [
-          "hemony"
-          "bourdon"
-        ];
-      }
-      # FIRES: body true under the model.
-      {
-        head = "rings:hemony:bourdon";
-        pos = [ "admits:bourdon:full-circle" ];
-        relata = [
-          "hemony"
-          "bourdon"
-        ];
-      }
-      # DOES NOT FIRE: its negative literal is true, so the body is false. A head match reports it.
-      {
-        head = "rings:hemony:bourdon";
-        pos = [ "admits:bourdon:full-circle" ];
-        neg = [ "silenced:hemony:bourdon" ];
-        relata = [
-          "hemony"
-          "bourdon"
-        ];
-      }
-    ];
-  };
+  headMatchProgram =
+    genProgram.program
+      [
+        "hemony"
+        "bourdon"
+        "full-circle"
+        "chiming"
+        "rudhall"
+        "mears"
+        "tenor"
+      ]
+      [
+        {
+          head = "admits:bourdon:full-circle";
+          relata = [
+            "bourdon"
+            "full-circle"
+          ];
+        }
+        {
+          head = "silenced:hemony:bourdon";
+          relata = [
+            "hemony"
+            "bourdon"
+          ];
+        }
+        # FIRES: body true under the model.
+        {
+          head = "rings:hemony:bourdon";
+          pos = [ "admits:bourdon:full-circle" ];
+          relata = [
+            "hemony"
+            "bourdon"
+          ];
+        }
+        # DOES NOT FIRE: its negative literal is true, so the body is false. A head match reports it.
+        {
+          head = "rings:hemony:bourdon";
+          pos = [ "admits:bourdon:full-circle" ];
+          neg = [ "silenced:hemony:bourdon" ];
+          relata = [
+            "hemony"
+            "bourdon"
+          ];
+        }
+      ];
   headMatchModel = genProgram.model {
     prior = null;
     program = headMatchProgram;

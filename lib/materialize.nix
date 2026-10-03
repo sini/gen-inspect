@@ -101,16 +101,22 @@ let
       #    (ADR-0020), a relation still growing, a declaration the model was not solved from. Reading
       #    `trueAtoms` instead dropped an undefined head at exit 0, because it is in no list of true
       #    atoms, so no edge and no door ever saw it.
-      reached =
-        (program.ruleEdges {
-          inherit declarations;
-          model = mdl;
-        }).reached;
+      reached = (program.ruleEdges mdl declarations).reached;
 
       # The origin's join back to the heads. An edge is a property of the membership, and gen-program
       # collapses agreeing heads into one edge, so one key may carry several heads, and its
       # derivations are all of theirs. `reached ⊆ candidates`, so every reached key has a head here.
-      labelled = builtins.filter (d: d.label != null) (map program.declaration declarations);
+      # Each declaration record through gen-program's door: its defaulted fields as the options
+      # step, then `relata` and `head` (den-hoag-7gp66 P2).
+      labelled = builtins.filter (d: d.label != null) (
+        map (
+          d:
+          program.declaration (removeAttrs d [
+            "head"
+            "relata"
+          ]) d.relata d.head
+        ) declarations
+      );
       edgeOf = d: {
         inherit (d) label;
         src = builtins.elemAt d.relata 0;
