@@ -12,7 +12,9 @@
 # refuse the name it had just been asked about. That is asserted, not assumed.
 {
   admitted,
+  genScope,
   genSelect,
+  reachFrom,
   ...
 }:
 let
@@ -101,7 +103,7 @@ in
     };
 
     test-the-result-is-an-ir-and-walks = {
-      expr = ringersOnly.graph.labeledEdges "hemony";
+      expr = reachFrom ringersOnly (genScope.wfl.alt (map genScope.wfl.lit ringersOnly.labels)) "hemony";
       expected = [ ];
     };
 

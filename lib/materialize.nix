@@ -48,8 +48,8 @@ let
   #
   # THE IR ADMITS AN EDGE WHOSE ENDPOINT IS NO REGISTERED NODE, and a walk follows it, so the scope's
   # vertices are the node ids PLUS every edge endpoint; the calculus refuses a node it was not
-  # given. `nodes` and `labeledEdges` are this library's own enumerations of the facts, carried
-  # beside the scope; the walk reads neither.
+  # given. The scope carries nothing beside itself: the IR's own `nodes` and `edges` are the
+  # enumerations, and the scope is what `resolve` walks.
   lift =
     perLabel: ids:
     let
@@ -108,19 +108,7 @@ let
             }
           );
     in
-    lifted
-    // {
-      nodes = ids;
-      labeledEdges =
-        id:
-        builtins.concatMap (
-          l:
-          map (t: {
-            label = l;
-            target = t;
-          }) (accessorOf l id)
-        ) letters;
-    };
+    lifted;
 
   # ── WITNESSES ARE BODY-CHECKED, NEVER HEAD-MATCHED ──
   # Van Gelder, Ross & Schlipf 1991 Def 3.3: p is derived iff some rule has head p AND EVERY body

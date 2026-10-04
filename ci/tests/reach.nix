@@ -15,8 +15,8 @@
 #
 # ★ CELL 5's SUBJECT LIVES HERE TOO — THE WALK MUST BE APPLIED. `perLabel` is an attrset of
 # ACCESSORS, label -> (id -> [targets]), and the wrong shape fails LAZILY: a flat edge list leaves
-# `nodes` reading its full count at exit 0 and reds only at the first APPLICATION of `labeledEdges`.
-# Every cell below therefore applies the walk rather than reading the graph's spine.
+# the node set reading its full count at exit 0 and reds only at the first APPLICATION of an
+# accessor. Every cell below therefore applies the walk rather than reading the graph's spine.
 {
   admitted,
   withdrawn,
@@ -40,6 +40,20 @@ let
     )) "hemony";
   irIn = admitted.inspector.facts;
   irOut = withdrawn.inspector.facts;
+  # One step from `from` under each of the walk's two labels, resolved over the lifted scope.
+  step =
+    ir: from:
+    builtins.listToAttrs (
+      map
+        (l: {
+          name = l;
+          value = reachFrom ir (wfl.lit l) from;
+        })
+        [
+          "enrolled"
+          "rings"
+        ]
+    );
 in
 {
   flake.tests.reach = {
@@ -73,37 +87,27 @@ in
     };
 
     # ── THE APPLIED WALK (cell 5) ──
-    # The wrong `perLabel` shape reds HERE and nowhere earlier.
+    # The wrong `perLabel` shape reds HERE and nowhere earlier: one step per label, resolved.
     test-the-labeled-walk-applies = {
-      expr = irIn.graph.labeledEdges "hemony";
-      expected = [
-        {
-          label = "enrolled";
-          target = "chiming";
-        }
-        {
-          label = "enrolled";
-          target = "full-circle";
-        }
-        {
-          label = "rings";
-          target = "bourdon";
-        }
-      ];
+      expr = step irIn "hemony";
+      expected = {
+        enrolled = [
+          "chiming"
+          "full-circle"
+        ];
+        rings = [ "bourdon" ];
+      };
     };
 
     test-the-withdrawn-walk-applies-and-loses-one-edge = {
-      expr = irOut.graph.labeledEdges "hemony";
-      expected = [
-        {
-          label = "enrolled";
-          target = "chiming";
-        }
-        {
-          label = "enrolled";
-          target = "full-circle";
-        }
-      ];
+      expr = step irOut "hemony";
+      expected = {
+        enrolled = [
+          "chiming"
+          "full-circle"
+        ];
+        rings = [ ];
+      };
     };
 
     # ★★ ONE LABEL, TWO ORIGINS, BOTH WALKABLE. `hemony` is DECLARED enrolled in `chiming` and
@@ -120,9 +124,23 @@ in
       ];
     };
 
-    # The node set is carried beside the lifted scope: it is what a consumer enumerates.
-    test-the-graph-carries-its-node-set = {
-      expr = builtins.length irIn.graph.nodes;
+    # The lifted scope's node set is the IR's: every edge endpoint here is a registered node.
+    # THE FACADE IS GONE (den-hoag-gayc U2d). The lifted scope carried the IR's `nodes` and a
+    # `labeledEdges` accessor beside it for gen-demo's pre-migration readers; it carries neither now,
+    # so a reader of the gen-graph record shape fails at the read rather than being served.
+    test-the-lifted-scope-carries-no-labeled-record = {
+      expr = {
+        nodes = irIn.graph ? nodes;
+        labeledEdges = irIn.graph ? labeledEdges;
+      };
+      expected = {
+        nodes = false;
+        labeledEdges = false;
+      };
+    };
+
+    test-the-lifted-scope-holds-the-ir-node-set = {
+      expr = builtins.length irIn.graph.allNodeIds;
       expected = 14;
     };
 
