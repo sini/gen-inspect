@@ -11,6 +11,7 @@
   genScope,
   genSelect,
   admitted,
+  reachFrom,
   ...
 }:
 let
@@ -171,7 +172,7 @@ in
     test-the-degenerate-case-is-queryable-and-walkable = {
       expr = {
         rows = plain.query "SELECT src, dst FROM edge ORDER BY src";
-        walk = plain.facts.graph.labeledEdges "hemony";
+        walk = reachFrom plain.facts (genScope.wfl.lit "enrolled") "hemony";
       };
       expected = {
         rows = [
@@ -184,12 +185,7 @@ in
             dst = "chiming";
           }
         ];
-        walk = [
-          {
-            label = "enrolled";
-            target = "chiming";
-          }
-        ];
+        walk = [ "chiming" ];
       };
     };
 

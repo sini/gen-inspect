@@ -57,8 +57,7 @@ tables  : kind -> name -> { name; kind; <attrs splatted>; },  plus `edge`
 kinds   : kind -> { name; }
 labels  : [ label ]  (declared ++ derived)
 graph   : a gen-scope evaluated scope over the SAME edge list (each label `l` the attribute `edges-l`,
-          `marks = _: _: [ ]`), carrying `nodes` and `labeledEdges` beside it; walk it with gen-scope's
-          `resolve`
+          `marks = _: _: [ ]`); walk it with gen-scope's `resolve`
 ```
 
 **`origin` is constructed at materialization, and the engine is not its source.** gen-scope's
