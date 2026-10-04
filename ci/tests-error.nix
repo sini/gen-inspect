@@ -106,9 +106,48 @@ let
       complete = true;
     };
   };
+
+  # ── THE FIXTURE FOR THE MODEL'S FORM ──
+  # `./tests/ir.nix`'s `uncontested` subject with gen-scope's `solve` record in place of gen-program's
+  # result record. The subject's `model` is gen-program's record: it is what binds the verdicts to
+  # the declarations they were solved from, and a bare solve record carries no such binding.
+  solveRecordDeclarations = [
+    {
+      head = "reach:a:b";
+      neg = [ "held:a:b" ];
+      relata = [
+        "a"
+        "b"
+      ];
+      label = "reach";
+    }
+  ];
+  solveRecordIr = genInspect.materialize {
+    register.v = {
+      a = { };
+      b = { };
+    };
+    relations = { };
+    declarations = solveRecordDeclarations;
+    model = genScope.solve [ ] (
+      genProgram.program [
+        "a"
+        "b"
+      ] solveRecordDeclarations
+    );
+  };
 in
 {
   flake.testsError = {
+    # ── DOOR 11: A gen-scope SOLVE RECORD AS THE MODEL IS REFUSED BY NAME ──
+    # Its control is `./tests/ir.nix`'s `test-an-uncontested-head-is-true-and-its-edge-is-a-rule-edge`.
+    # The pinned text is GEN-PROGRAM's whole message, `(in prelude.checkRequired)` included, so a
+    # gen-program reword reds this cell at the next relock, as Door 10 does.
+    test-a-gen-scope-solve-record-as-the-model-is-refused-by-name = {
+      expr = builtins.deepSeq solveRecordIr.edges solveRecordIr;
+      expectedError.msg = exactly "gen-program.ruleEdges: the `model` operand (a gen-program result record): required field 'complete' is missing (required: 'complete', 'resolve', 'rules') (in prelude.checkRequired)";
+    };
+
     # ── DOOR 1: an unknown table, refused by name WITH THE KNOWN SET ──
     test-an-unknown-table-is-refused-by-name-with-the-known-set = {
       expr = q "SELECT name FROM anvils";
