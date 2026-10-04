@@ -13,7 +13,7 @@
 #   tables  : kind -> name -> { name; kind; <attrs splatted>; },  plus `edge` — the queryable rows
 #   kinds   : kind -> { name; }                     — what a `WHERE kind = '…'` resolves against
 #   labels  : [ label ]  (declared ++ derived)      — the door's known set for a label value
-#   graph   : the gen-graph labeled value over the SAME edge list (ADR-0012: one edge list)
+#   graph   : a gen-scope evaluated scope over the SAME edge list (ADR-0012: one edge list), see `lift`
 #
 # ── ORIGIN IS CONSTRUCTED HERE, AND THE ENGINE IS NOT ITS SOURCE ──
 # gen-scope's `provenance` is a CONDENSATION-DEPTH STAMP, not per-atom provenance: measured at the
@@ -29,11 +29,98 @@
 # run, and nothing here computes with them algebraically.
 {
   lib,
-  graph,
+  scope,
   program,
 }:
 let
   keyOf = e: "${e.label}:${e.src}:${e.dst}";
+
+  # ── LIFT — a materialized graph into an EVALUATED SCOPE (den-hoag-gayc U2c) ──
+  # The one structure gen-scope's resolution calculus walks. `lift perLabel ids` takes `perLabel`, an
+  # attrset of ACCESSORS (label -> id -> [targets]), and `ids`, the node set. The scope is
+  # gen-authored, so its nodes declare `marks = _: _: [ ]`: nothing is withheld. A letter `l` becomes
+  # the attribute `edges-l` the calculus reads at each reached node; the two letters the calculus owns
+  # are read where it reads them — `parent` is containment, the node record's `.parent`, and
+  # `imports` is its import relation — so a label spelled either way is walked as the calculus walks
+  # that letter and not as a silently empty `edges-parent`. Containment is a FUNCTION, so a node with
+  # two `parent` targets is refused by name rather than resolved over a graph the calculus cannot
+  # represent.
+  #
+  # THE IR ADMITS AN EDGE WHOSE ENDPOINT IS NO REGISTERED NODE, and a walk follows it, so the scope's
+  # vertices are the node ids PLUS every edge endpoint; the calculus refuses a node it was not
+  # given. `nodes` and `labeledEdges` are this library's own enumerations of the facts, carried
+  # beside the scope; the walk reads neither.
+  lift =
+    perLabel: ids:
+    let
+      letters = builtins.attrNames perLabel;
+      accessorOf = l: perLabel.${l};
+      endpoints = builtins.attrNames (
+        builtins.listToAttrs (
+          map (n: {
+            name = n;
+            value = null;
+          }) (builtins.concatMap (l: builtins.concatMap (accessorOf l) ids) letters)
+        )
+      );
+      known = builtins.listToAttrs (
+        map (n: {
+          name = n;
+          value = null;
+        }) ids
+      );
+      vertices = ids ++ builtins.filter (n: !(known ? ${n})) endpoints;
+      parentEdges = builtins.concatMap (
+        s:
+        let
+          ps = accessorOf "parent" s;
+        in
+        if builtins.length ps > 1 then
+          throw "gen-inspect: node '${s}' has ${toString (builtins.length ps)} 'parent' targets (${builtins.toJSON ps}); the label 'parent' is the calculus's containment, which is a function — a node has at most one parent"
+        else
+          map (t: {
+            from = s;
+            to = t;
+          }) ps
+      ) vertices;
+      lifted =
+        scope.eval { parseParent = _: null; }
+          (
+            {
+              children = _: _: { };
+              marks = _: _: [ ];
+            }
+            // lib.optionalAttrs (perLabel ? imports) { imports = _self: accessorOf "imports"; }
+            // builtins.listToAttrs (
+              map (l: {
+                name = "edges-${l}";
+                value = _self: accessorOf l;
+              }) (builtins.filter (l: l != "parent" && l != "imports") letters)
+            )
+          )
+          (
+            scope.buildRoots {
+              parentGraph =
+                if perLabel ? parent then
+                  scope.overlay (scope.vertices vertices) (scope.edges parentEdges)
+                else
+                  scope.vertices vertices;
+            }
+          );
+    in
+    lifted
+    // {
+      nodes = ids;
+      labeledEdges =
+        id:
+        builtins.concatMap (
+          l:
+          map (t: {
+            label = l;
+            target = t;
+          }) (accessorOf l id)
+        ) letters;
+    };
 
   # ── WITNESSES ARE BODY-CHECKED, NEVER HEAD-MATCHED ──
   # Van Gelder, Ross & Schlipf 1991 Def 3.3: p is derived iff some rule has head p AND EVERY body
@@ -255,7 +342,7 @@ let
           labels
           ;
         origins = checked;
-        graph = graph.labeledFrom perLabel (map (n: n.id) nodes);
+        graph = lift perLabel (map (n: n.id) nodes);
       };
 
   # ── THE DEGENERATE CASE, THROUGH AN EXPLICIT WRAPPER ──
@@ -312,6 +399,7 @@ in
     graphSubject
     keyOf
     witnesses
+    lift
     ;
   fromGraph = args: materialize (graphSubject args);
 }

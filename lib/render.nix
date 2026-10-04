@@ -60,7 +60,7 @@ let
     )
     + "\n";
 
-  # ★ THE IR CARRIES A gen-graph VALUE, AND A GRAPH HOLDS ACCESSORS — `builtins.toJSON` of the whole
+  # ★ THE IR CARRIES AN EVALUATED SCOPE, AND A SCOPE HOLDS ACCESSORS — `builtins.toJSON` of the whole
   #   IR aborts with "cannot convert a function to JSON". The serializable projection is named here
   #   rather than left to the caller, so the JSON renderer is total over every IR this library
   #   produces instead of over the ones whose graph nobody reached.

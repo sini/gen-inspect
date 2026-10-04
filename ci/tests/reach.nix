@@ -20,31 +20,24 @@
 {
   admitted,
   withdrawn,
-  genGraph,
+  genInspect,
+  genScope,
+  reachFrom,
   ...
 }:
 let
-  reach =
-    ir: from:
-    genGraph.query { } {
-      graph = ir.graph;
-      inherit from;
-      follow = genGraph.regex.star (genGraph.regex.lit "rings");
-    };
+  inherit (genScope) wfl;
+  reach = ir: reachFrom ir (wfl.star (wfl.lit "rings"));
   # `alt` takes a LIST of patterns, not two arguments — its own ACI normalization flattens nested
   # alternatives, dedups and sorts, which is only expressible over a list.
   ringers =
     ir:
-    genGraph.query { } {
-      graph = ir.graph;
-      from = "hemony";
-      follow = genGraph.regex.star (
-        genGraph.regex.alt [
-          (genGraph.regex.lit "enrolled")
-          (genGraph.regex.lit "rings")
-        ]
-      );
-    };
+    reachFrom ir (wfl.star (
+      wfl.alt [
+        (wfl.lit "enrolled")
+        (wfl.lit "rings")
+      ]
+    )) "hemony";
   irIn = admitted.inspector.facts;
   irOut = withdrawn.inspector.facts;
 in
@@ -127,10 +120,109 @@ in
       ];
     };
 
-    # The node set is carried, which is what makes the global half of gen-graph reachable at all.
+    # The node set is carried beside the lifted scope: it is what a consumer enumerates.
     test-the-graph-carries-its-node-set = {
       expr = builtins.length irIn.graph.nodes;
       expected = 14;
+    };
+
+    # ── LIFT EQUIVALENCE, WITH ITS PLANTED CONTROL (design §5.4) ──
+    # The calculus's answer over the lifted scope equals an independent closure of the IR's own edge
+    # list, from every node. The closure is `genericClosure` over `ir.edges` and shares nothing with
+    # the lift. The planted arm lifts the same IR with the `rings` edge out of `hemony` dropped and
+    # must DIFFER from that closure, so the equality is shown to discriminate rather than to hold of
+    # any pair of answers.
+    test-the-lifted-walk-equals-the-ir-edge-closure-and-a-planted-edge-differs = {
+      expr =
+        let
+          anyLabel = wfl.star (wfl.alt (map wfl.lit irIn.labels));
+          closure =
+            ir: from:
+            builtins.sort builtins.lessThan (
+              map (x: x.key) (
+                builtins.genericClosure {
+                  startSet = [ { key = from; } ];
+                  operator = x: map (e: { key = e.dst; }) (builtins.filter (e: e.src == x.key) ir.edges);
+                }
+              )
+            );
+          ids = map (n: n.id) irIn.nodes;
+          planted = genInspect.fromGraph {
+            nodes = ids;
+            perLabel = builtins.listToAttrs (
+              map (l: {
+                name = l;
+                value =
+                  id:
+                  map (e: e.dst) (
+                    builtins.filter (
+                      e: e.label == l && e.src == id && !(e.src == "hemony" && e.label == "rings")
+                    ) irIn.edges
+                  );
+              }) irIn.labels
+            );
+          };
+        in
+        {
+          lifted = builtins.all (n: reachFrom irIn anyLabel n == closure irIn n) ids;
+          planted = reachFrom planted.facts anyLabel "hemony" == closure irIn "hemony";
+        };
+      expected = {
+        lifted = true;
+        planted = false;
+      };
+    };
+
+    # `parent` and `imports` are the calculus's own letters, so a label spelled either way is lifted
+    # onto containment and the import relation. An `edges-parent` attribute would be read by nothing
+    # and the walk would answer `[ "a" ]` at exit 0.
+    test-a-label-spelled-parent-or-imports-is-walked = {
+      expr =
+        let
+          g = genInspect.fromGraph {
+            nodes = [
+              "a"
+              "b"
+              "c"
+            ];
+            perLabel = {
+              parent = id: if id == "a" then [ "b" ] else [ ];
+              imports =
+                id:
+                if id == "b" then
+                  [
+                    "c"
+                  ]
+                else
+                  [ ];
+            };
+          };
+        in
+        {
+          parent = reachFrom g.facts (wfl.star (wfl.lit "parent")) "a";
+          imports = reachFrom g.facts (wfl.star (wfl.lit "imports")) "b";
+          both = reachFrom g.facts (wfl.star (
+            wfl.alt [
+              (wfl.lit "parent")
+              (wfl.lit "imports")
+            ]
+          )) "a";
+        };
+      expected = {
+        parent = [
+          "a"
+          "b"
+        ];
+        imports = [
+          "b"
+          "c"
+        ];
+        both = [
+          "a"
+          "b"
+          "c"
+        ];
+      };
     };
   };
 }

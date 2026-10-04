@@ -20,7 +20,7 @@
 #
 # ── THE PROGRAM ROUTE: `reaches` IS A TABLE THE ENGINE COMPUTES AND THE FOLD CONSUMES ──
 # A row `(src, dst, via)` says `dst` is reachable from `src` along edges labelled `via`, reflexively
-# and transitively; `via = '*'` is any label — the Kleene star gen-graph's `regex.star` computes. Each
+# and transitively; `via = '*'` is any label — the Kleene star of a path expression. Each
 # constrained `(via, src)` is a gen-program declaration set over the IR's edges `E_via`:
 #
 #   one fact per edge     `<label>:<src>:<dst>`               (the IR key itself)

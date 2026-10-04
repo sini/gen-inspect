@@ -88,7 +88,22 @@
           mkFleet
           fleetFlake
           ;
-        genGraph = graph;
+        genScope = scope;
+        # The nodes the calculus reaches from `from` over the IR's lifted scope under the path
+        # expression `term`, sorted. The alphabet is the IR's own label vocabulary and the
+        # data filter admits every node, so the answer is reachability and nothing finer.
+        reachFrom =
+          ir: term: from:
+          prelude.sort builtins.lessThan (
+            map (a: a.node)
+              (scope.resolve {
+                wf = scope.wellFormed {
+                  alphabet = ir.labels;
+                  expression = term;
+                };
+                dataFilter = _: true;
+              } ir.graph from).answers
+          );
         genSelect = select;
         genPrelude = prelude;
         # The two arms of the example fleet, built once and shared. `admitted` is the whole subject;
