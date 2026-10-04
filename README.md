@@ -19,7 +19,7 @@ i = genInspect.mkInspector {
   register  = { … };   # kind -> name -> attrs
   relations = { … };   # label -> src -> [ dst ]
   declarations = …;    # gen-program declarations; one carrying `label` denotes an edge
-  model     = …;       # its model, already solved by gen-scope
+  model     = program.model { … };  # gen-program's result record for these declarations
 };
 
 i.facts                    # the IR
@@ -68,6 +68,13 @@ makes origin derivable at all.
 **The rule edges are gen-program's `(ruleEdges model declarations).reached`, never an atom parsed
 here.** A declaration's `label` names the edge its head denotes, `{ from = relata[0]; to = relata[1]; label; }`. `reached` refuses by name every answer an edge list cannot carry, so a labelled head
 the well-founded model leaves **undefined** is refused rather than dropped.
+
+**The subject's `model` is gen-program's result record.** It is the value `program.model` returns,
+solved from the subject's own `declarations`. It carries the rules the verdicts were solved from,
+which is what lets `ruleEdges` refuse a model of other declarations or a relation still growing. A
+gen-scope `solve` record carries the verdicts alone, so with a labelled declaration gen-program
+refuses it by name and the refusal passes through. With no labelled declaration only `verdict` is
+read, which is the degenerate subject `graphSubject` builds.
 
 **A witness is body-checked, never head-matched.** Van Gelder, Ross & Schlipf 1991 Def 3.3: an atom
 is derived iff some rule has it as head **and every body literal is true in the model**. A head match

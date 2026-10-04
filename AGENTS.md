@@ -40,7 +40,9 @@ so an APPLIED output here would abort every hub evaluation with `attempt to call
   **condensation-depth stamp** and not per-atom provenance. Its rule edges are gen-program's
   `(ruleEdges model declarations).reached`, never a parsed atom, so an UNDEFINED head refuses by
   name (gen-program's refusal). Carries two doors of its own: the missing-field refusal and the
-  reached-edge-with-no-IR-edge refusal.
+  reached-edge-with-no-IR-edge refusal. The subject's `model` is gen-program's result record
+  (`program.model`), not a gen-scope solve record: a solve record is refused by gen-program's door
+  and the refusal passes through (`tests-error.nix`, Door 11).
 - **`extras.nix`** — gen-prelude plus the seven names the copied parser needs. **Not nixpkgs `lib`.**
 - **`sql.nix`** / **`executor.nix`** — COPIES from `gen-scope/examples/sql-schema` at gen-scope
   `675d9f3`, each with an origin header naming the source md5 and the whole diff. An example is not
