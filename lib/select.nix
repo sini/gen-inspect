@@ -13,7 +13,7 @@
 # door's known sets; narrowing them with the node set would make a query's own result the authority
 # on which label names exist, so `WHERE label = 'rings'` over an IR′ that kept no `rings` edge would
 # refuse the name it had just been asked about.
-{ lib, graph }:
+{ lib, lift }:
 let
   # gen-select matches a POSITION against a context. A node here is its own position: the IR is flat
   # — nodes carry a kind and an attrs splat, and no containment relation among them — so `parent`,
@@ -70,7 +70,7 @@ let
         // {
           edge = lib.filterAttrs (k: _: builtins.elem k keptKeys) ir.tables.edge;
         };
-      graph = graph.labeledFrom (lib.genAttrs ir.labels (
+      graph = lift (lib.genAttrs ir.labels (
         label: id: map (e: e.dst) (builtins.filter (e: e.label == label && e.src == id) keptEdges)
       )) ids;
     };

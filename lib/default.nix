@@ -30,6 +30,9 @@
 # constructs inside the consumer's own evaluation; it re-exports none of them.
 {
   prelude,
+  # `graph` is gen-graph. The walk the IR's `graph` field answers is gen-scope's calculus over a lifted
+  # scope (`lift` in `./materialize.nix`), so this library reads no gen-graph symbol; it stays a formal because the
+  # standalone entry and the hub supply it, and retiring it touches the hub's supply.
   graph,
   select,
   # `scope` is gen-scope, the sole evaluator (ADR-0006). The program route reaches it through
@@ -52,8 +55,11 @@ let
     inherit lib;
     genSelect = select;
   };
-  materialize = import ./materialize.nix { inherit lib graph program; };
-  selecting = import ./select.nix { inherit lib graph; };
+  materialize = import ./materialize.nix { inherit lib scope program; };
+  selecting = import ./select.nix {
+    inherit lib;
+    inherit (materialize) lift;
+  };
   compile = import ./compile.nix {
     inherit lib program;
     inherit (materialize) witnesses;

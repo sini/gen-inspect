@@ -8,7 +8,7 @@
 # refused set" is a claim about a list rather than a fact about the library.
 {
   genInspect,
-  genGraph,
+  genScope,
   genSelect,
   admitted,
   ...
@@ -210,9 +210,15 @@ in
       };
     };
 
-    test-gen-graph-supplies-the-enumerations-not-gen-view = {
-      expr = genGraph ? labeledFrom;
-      expected = true;
+    test-gen-scope-supplies-the-walk = {
+      expr = {
+        resolve = genScope ? resolve;
+        wellFormed = genScope ? wellFormed;
+      };
+      expected = {
+        resolve = true;
+        wellFormed = true;
+      };
     };
   };
 }

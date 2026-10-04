@@ -2,7 +2,7 @@
 #
 # C1  recursion answers instead of being refused.
 # C2  ★ recursion AGREES ACROSS FRAGMENTS, the design's recursion cell. Per question Q(via, src),
-#     three arms in one run: E, the engine (`reaches`); G, gate 1's graph walk (`regex.star`); J_k,
+#     three arms in one run: E, the engine (`reaches`); G, gate 1's graph walk (gen-scope's `resolve` over the lifted scope); J_k,
 #     the non-recursive fragment — `{src}` plus the 1..k-hop self-JOIN chains over `edge`. Asserted:
 #     E = G, every J_k ⊆ E, and J_4 = E (Kleene iteration of the least fixpoint saturates; the
 #     fleet's longest shortest path is 3).
@@ -20,7 +20,8 @@
   withdrawn,
   genInspect,
   genProgram,
-  genGraph,
+  genScope,
+  reachFrom,
   genPrelude,
   ...
 }:
@@ -34,18 +35,9 @@ let
 
   walk =
     facts: via: src:
-    sort (
-      genGraph.query { } {
-        graph = facts.graph;
-        from = src;
-        follow = genGraph.regex.star (
-          if via == "*" then
-            genGraph.regex.alt (map genGraph.regex.lit facts.labels)
-          else
-            genGraph.regex.lit via
-        );
-      }
-    );
+    reachFrom facts (genScope.wfl.star (
+      if via == "*" then genScope.wfl.alt (map genScope.wfl.lit facts.labels) else genScope.wfl.lit via
+    )) src;
 
   chain =
     via: src: i:

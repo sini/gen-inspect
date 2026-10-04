@@ -22,6 +22,7 @@
 {
   genInspect,
   genProgram,
+  genScope,
   genPrelude,
   admitted,
   ...
@@ -254,6 +255,38 @@ in
     test-graphsubject-missing-required-field-names-the-door = {
       expr = builtins.deepSeq (genInspect.graphSubject { nodes = [ "a" ]; }) null;
       expectedError.msg = exactly "gen-inspect.graphSubject: required field 'perLabel' is missing (required: 'nodes', 'perLabel') (in prelude.checkRequired)";
+    };
+
+    # Containment is a function, so the lift refuses a second `parent` target by name where the walk
+    # reads it, rather than resolving over a graph the calculus cannot represent.
+    test-a-node-with-two-parent-targets-is-refused-by-the-lift = {
+      expr =
+        let
+          g = genInspect.fromGraph {
+            nodes = [
+              "a"
+              "b"
+              "c"
+            ];
+            perLabel.parent =
+              id:
+              if id == "a" then
+                [
+                  "b"
+                  "c"
+                ]
+              else
+                [ ];
+          };
+        in
+        builtins.deepSeq (genScope.resolve {
+          wf = genScope.wellFormed {
+            alphabet = g.facts.labels;
+            expression = "parent*";
+          };
+          dataFilter = _: true;
+        } g.facts.graph "a") null;
+      expectedError.msg = contains "gen-inspect: node 'a' has 2 'parent' targets";
     };
 
     test-graphsubject-unknown-option-names-the-door = {

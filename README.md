@@ -56,7 +56,9 @@ origin  : { kind = "declaration"; site; }
 tables  : kind -> name -> { name; kind; <attrs splatted>; },  plus `edge`
 kinds   : kind -> { name; }
 labels  : [ label ]  (declared ++ derived)
-graph   : the gen-graph labeled value over the SAME edge list
+graph   : a gen-scope evaluated scope over the SAME edge list (each label `l` the attribute `edges-l`,
+          `marks = _: _: [ ]`), carrying `nodes` and `labeledEdges` beside it; walk it with gen-scope's
+          `resolve`
 ```
 
 **`origin` is constructed at materialization, and the engine is not its source.** gen-scope's
@@ -242,8 +244,8 @@ nothing"*, and `via = 'anvils'` answers `hemony` alone, reading as *"hemony reac
 ## Dependencies, and what is not one
 
 Five gen libraries, all **injected as values** — only plain data crosses a gen↔gen boundary.
-`gen-prelude`, `gen-graph` and `gen-select` serve the selector and executor routes; `gen-scope` and
-`gen-program` serve the program route.
+`gen-prelude` and `gen-select` serve the selector and executor routes (and `gen-graph` is declared, but no
+symbol of it is read); `gen-scope` serves the lifted graph and, with `gen-program`, the program route.
 
 **`program` is gen-program applied, and its standalone default is built from this library's own
 `prelude` and `scope`.** gen-program's root is itself unapplied. Resolving it the way the other four
