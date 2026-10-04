@@ -69,6 +69,11 @@ makes origin derivable at all.
 here.** A declaration's `label` names the edge its head denotes, `{ from = relata[0]; to = relata[1]; label; }`. `reached` refuses by name every answer an edge list cannot carry, so a labelled head
 the well-founded model leaves **undefined** is refused rather than dropped.
 
+**A promoted head is refused by name.** A declaration carrying gen-program's `promote` makes its
+included head a node, whose identity only the caller's mint supplies. The IR draws a rule head only
+as an edge, read off `reached`, which holds no promotion, so `materialize` refuses a subject with a
+promoted declaration, naming the head, rather than drop it at exit 0 (`tests-error.nix`, Door 12).
+
 **The subject's `model` is gen-program's result record.** It is the value `program.model` returns,
 solved from the subject's own `declarations`. It carries the rules the verdicts were solved from,
 which is what lets `ruleEdges` refuse a model of other declarations or a relation still growing. A

@@ -39,8 +39,9 @@ so an APPLIED output here would abort every hub evaluation with `attempt to call
   the subject's declarations × `model.verdict`, because gen-scope's `provenance` is a
   **condensation-depth stamp** and not per-atom provenance. Its rule edges are gen-program's
   `(ruleEdges model declarations).reached`, never a parsed atom, so an UNDEFINED head refuses by
-  name (gen-program's refusal). Carries two doors of its own: the missing-field refusal and the
-  reached-edge-with-no-IR-edge refusal. The subject's `model` is gen-program's result record
+  name (gen-program's refusal). Carries three doors of its own: the missing-field refusal, the
+  reached-edge-with-no-IR-edge refusal and the promoted-head refusal (a gen-program `promote`
+  declaration has no IR rendering, so it is refused by name rather than dropped; Door 12). The subject's `model` is gen-program's result record
   (`program.model`), not a gen-scope solve record: a solve record is refused by gen-program's door
   and the refusal passes through (`tests-error.nix`, Door 11).
 - **`extras.nix`** — gen-prelude plus the seven names the copied parser needs. **Not nixpkgs `lib`.**
