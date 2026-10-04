@@ -341,11 +341,11 @@
         "gen-algebra": "gen-algebra_2"
       },
       "locked": {
-        "lastModified": 1791147485,
-        "narHash": "sha256-9LP/wwqfCx+RBhkCIBjaiRtG6nSPPSDdC86919FBgeI=",
+        "lastModified": 1791151462,
+        "narHash": "sha256-2vcnv/nIfcGRgRg2Qzmc0zXKNvUuQNisC2lYwsNDXT0=",
         "owner": "sini",
         "repo": "gen-select",
-        "rev": "476eeeeeb2c9bd04338542a7479b9e603adabb89",
+        "rev": "725c54aa89a354ab3b418ede2886936f680563ab",
         "type": "github"
       },
       "original": {
