@@ -183,15 +183,20 @@ let
       # derivations are all of theirs. `reached ⊆ candidates`, so every reached key has a head here.
       # Each declaration record through gen-program's door: its defaulted fields as the options
       # step, then `relata` and `head` (den-hoag-7gp66 P2).
-      labelled = builtins.filter (d: d.label != null) (
-        map (
-          d:
-          program.declaration (removeAttrs d [
-            "head"
-            "relata"
-          ]) d.relata d.head
-        ) declarations
-      );
+      normalized = map (
+        d:
+        program.declaration (removeAttrs d [
+          "head"
+          "relata"
+        ]) d.relata d.head
+      ) declarations;
+      labelled = builtins.filter (d: d.label != null) normalized;
+
+      # ★ A PROMOTED HEAD IS REFUSED, NOT DROPPED. gen-program's `promote` makes an included head a
+      #   NODE whose identity only the caller's mint supplies; the IR draws a rule head only as an
+      #   edge, read off `reached`, which holds no promotion. Without this refusal an included
+      #   promoted head had no node, no edge and no origin at exit 0.
+      promotedHeads = lib.unique (map (d: d.head) (builtins.filter (d: d.promote != null) normalized));
       edgeOf = d: {
         inherit (d) label;
         src = builtins.elemAt d.relata 0;
@@ -320,6 +325,10 @@ let
     in
     if missing != [ ] then
       throw "gen-inspect: not an evaluated scope; missing field(s): ${builtins.concatStringsSep ", " missing}"
+    else if promotedHeads != [ ] then
+      throw "gen-inspect: ${
+        builtins.concatStringsSep ", " (map (h: "'${h}'") promotedHeads)
+      } is promoted to a node (gen-program's `promote`); the IR draws a rule head only as an edge, so a promoted head would be dropped from it, and materialize refuses it rather than drop it"
     else
       {
         inherit
