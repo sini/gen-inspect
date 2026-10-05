@@ -79,9 +79,9 @@ projected to the included promoted heads) and this library mints nothing. Each m
 nothing is promoted, and `materialize` refuses it by name, listing every fault, unless its nodes are
 exactly the included promoted heads, none already registered, each with a non-empty string `identity`
 and its promotion's `kind`, with edges exactly its promotion's relata and no edge from anything else
-(`tests-error.nix`, Doors 12–17). **That is a shape door, not ADR-0016 ruling 5's refusal:** the
-mint's node record carries no provenance mark, so a well-formed identity this library cannot
-re-derive is taken from the caller, as `model` is.
+(`tests-error.nix`, Doors 12–17). **That is a shape door, not a check of where the identity came
+from:** the mint's node record carries no provenance mark, so a well-formed identity this library
+cannot re-derive is taken from the caller, as `model` is.
 
 **The subject's `model` is gen-program's result record.** It is the value `program.model` returns,
 solved from the subject's own `declarations`. It carries the rules the verdicts were solved from,
