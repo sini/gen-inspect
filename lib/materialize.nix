@@ -347,37 +347,40 @@ let
   # rather than a shape probe so that `materialize`'s missing-field refusal stays NAMED: a probe
   # would silently accept a graph as a scope and answer about an empty program.
   #
-  # MIXED class (den-hoag-7gp66 P1, §v1.2/§v1.7 row 7-15): closed over the whole set — transitional,
-  # per §v1.2, until P2 moves the options off the record. A native closed formal here aborted an
-  # unknown or missing field past `tryEval` (ADR-0025 item 1); `lib.checkOptions`/`checkRequired`
-  # (gen-prelude, threaded through via `./extras.nix`'s `prelude // { … }`) make both refusals named
-  # and catchable instead.
-  graphSubject =
-    args:
+  # OPTIONS FIRST, THEN THE GRAPH (den-hoag-7gp66 P2, rules 2 and 3): `graphSubject { kind?; }
+  # { nodes; perLabel; }`. The one optional field leaves for a closed options set, refused by name and
+  # catchably at `graphSubject opts`'s own WHNF. `nodes` and `perLabel` together ARE the graph — an
+  # accessor record (rule 3, owner-ruled "extend") — so they stay one open operand, its own door: a
+  # missing field is refused by name at the record's application, an extra one is admitted (R5), and
+  # `kind` given on the record instead of the options is refused by name rather than silently dropped
+  # (`optionsStep`). Both specs are bound once, here.
+  graphSubjectOptions = lib.door {
+    name = "gen-inspect.graphSubject";
+    next = graphRecordSpec;
+    optional = [ "kind" ];
+  };
+  graphRecordSpec = {
+    name = "gen-inspect.graphSubject";
+    required = [
+      "nodes"
+      "perLabel"
+    ];
+    open = true;
+    optionsStep = graphSubject;
+  };
+  graphRecord = lib.door graphRecordSpec;
+  # `fromGraphWith k` is the same two steps with `k` applied to the subject: `fromGraph` is
+  # `materialize` through it (and the inspector's `checked` through it), so its options and its
+  # record are refused exactly as `graphSubject`'s are.
+  fromGraphWith = k: graphSubjectOptions (o: graphRecord (r: k (graphSubjectCore o r)));
+  graphSubject = fromGraphWith (subject: subject);
+  graphSubjectCore =
+    o:
+    { nodes, perLabel, ... }:
     let
-      checked =
-        lib.checkOptions "gen-inspect.graphSubject"
-          [
-            "nodes"
-            "perLabel"
-            "kind"
-          ]
-          (
-            lib.checkRequired "gen-inspect.graphSubject" [
-              "nodes"
-              "perLabel"
-            ] args
-          );
-      nodes = checked.nodes;
-      perLabel = checked.perLabel;
-      kind = checked.kind or "vertex";
+      kind = o.kind or "vertex";
     in
-    # `declarations` and `model` below are static — neither reads `checked` — so without this `seq`
-    # the refusal would fire only for a caller who happens to force `register`/`relations`, never for
-    # one who reads `declarations`/`model` alone or merely applies the door to WHNF (measured: `tryEval
-    # (builtins.seq (graphSubject bad) null)` answered `success` with no `seq` here). Forcing `checked`
-    # at application makes the refusal unconditional on what the caller later reads.
-    builtins.seq checked {
+    {
       register.${kind} = lib.genAttrs nodes (_: { });
       # `perLabel` is an ACCESSOR per label; `relations` is the same relation as DATA. The node set
       # is what makes the conversion possible at all — an accessor's domain is not enumerable, which
@@ -398,5 +401,6 @@ in
     witnesses
     lift
     ;
-  fromGraph = args: materialize (graphSubject args);
+  inherit fromGraphWith;
+  fromGraph = fromGraphWith materialize;
 }

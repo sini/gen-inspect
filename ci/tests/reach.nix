@@ -165,7 +165,7 @@ in
               )
             );
           ids = map (n: n.id) irIn.nodes;
-          planted = genInspect.fromGraph {
+          planted = genInspect.fromGraph { } {
             nodes = ids;
             perLabel = builtins.listToAttrs (
               map (l: {
@@ -197,7 +197,7 @@ in
     test-a-label-spelled-parent-or-imports-is-walked = {
       expr =
         let
-          g = genInspect.fromGraph {
+          g = genInspect.fromGraph { } {
             nodes = [
               "a"
               "b"

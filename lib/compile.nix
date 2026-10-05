@@ -293,8 +293,10 @@ let
   # THE ENTRY. It returns the executor's two arguments: the table map, now also holding `edge`'s
   # `why` and one grounded `reaches` relation per occurrence, and the AST, with each `reaches`
   # occurrence pointed at its own relation.
+  # SUBJECT LAST (den-hoag-7gp66 P2, rule 4): the query is the configuration, the IR it is compiled
+  # against is the subject, so `compile ast ir`.
   compile =
-    ir: ast:
+    ast: ir:
     let
       hit = builtins.filter isReserved (names ast);
     in
