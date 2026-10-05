@@ -80,6 +80,7 @@ in
       expr = builtins.attrNames (genInspect.graphSubject validArgs);
       expected = [
         "declarations"
+        "minted"
         "model"
         "register"
         "relations"

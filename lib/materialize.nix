@@ -157,8 +157,14 @@ let
         "relations"
         "declarations"
         "model"
+        "minted"
       ];
-      inherit (subject) register relations declarations;
+      inherit (subject)
+        register
+        relations
+        declarations
+        minted
+        ;
       mdl = subject.model;
 
       # A rule program's FACT is a declaration and carries a declaration origin, so only a rule with
@@ -176,7 +182,8 @@ let
       #    (ADR-0020), a relation still growing, a declaration the model was not solved from. Reading
       #    `trueAtoms` instead dropped an undefined head at exit 0, because it is in no list of true
       #    atoms, so no edge and no door ever saw it.
-      reached = (program.ruleEdges mdl declarations).reached;
+      ruled = program.ruleEdges mdl declarations;
+      inherit (ruled) reached;
 
       # The origin's join back to the heads. An edge is a property of the membership, and gen-program
       # collapses agreeing heads into one edge, so one key may carry several heads, and its
@@ -192,11 +199,86 @@ let
       ) declarations;
       labelled = builtins.filter (d: d.label != null) normalized;
 
-      # ★ A PROMOTED HEAD IS REFUSED, NOT DROPPED. gen-program's `promote` makes an included head a
-      #   NODE whose identity only the caller's mint supplies; the IR draws a rule head only as an
-      #   edge, read off `reached`, which holds no promotion. Without this refusal an included
-      #   promoted head had no node, no edge and no origin at exit 0.
-      promotedHeads = lib.unique (map (d: d.head) (builtins.filter (d: d.promote != null) normalized));
+      # ★ A PROMOTED HEAD IS A NODE, READ FROM THE CALLER'S MINT. gen-program's `promoted` says which
+      #   promoted heads the model includes; only the caller's mint gives such a head an identity
+      #   (ADR-0016 rulings 5, 7), so the subject carries the mint's output as `minted` and this
+      #   library mints nothing. `minted` is REQUIRED, `{ nodes = { }; edges = [ ]; }` when nothing
+      #   is promoted, so the door below always runs: a mint that a subject without a promoted
+      #   declaration carries is refused, never ignored. Its node set must be exactly the included
+      #   promoted heads, none already registered, each with a string identity and its record's
+      #   kind, with the mint's edges to its record's relata and no edge from anything else.
+      #
+      #   ★ THIS IS A SHAPE DOOR, NOT ADR-0016 r5's REFUSAL. The mint's node record carries no
+      #   provenance mark and this library holds neither the relata identities nor the authority,
+      #   so a well-formed identity it cannot re-derive is taken from the caller, as `model` is.
+      promotedRecs = if builtins.any (d: d.promote != null) normalized then ruled.promoted else [ ];
+      promotedIds = map (p: p.identifier) promotedRecs;
+      mintedIds = builtins.attrNames minted.nodes;
+      mintedEdgesOf = h: builtins.filter (e: e.from == h) minted.edges;
+      sorted = lib.sort (a: b: a < b);
+      mintedRecs = builtins.filter (p: builtins.elem p.identifier mintedIds) promotedRecs;
+      faultsOf =
+        msg: pred: xs:
+        map msg (builtins.filter pred xs);
+      mintFaults =
+        faultsOf (h: "'${h}' is an included promoted head with no minted node") (
+          h: !(builtins.elem h mintedIds)
+        ) promotedIds
+        ++ faultsOf (h: "minted node '${h}' is not a promoted head this model includes") (
+          h: !(builtins.elem h promotedIds)
+        ) mintedIds
+        ++ faultsOf (
+          h:
+          "minted node '${h}' is already a registered node, of kind(s) ${
+            builtins.concatStringsSep ", " (
+              builtins.filter (k: register.${k} ? ${h}) (builtins.attrNames register)
+            )
+          }"
+        ) (h: builtins.any (k: register.${k} ? ${h}) (builtins.attrNames register)) mintedIds
+        ++ faultsOf (p: "minted node '${p.identifier}' carries no identity") (
+          p:
+          let
+            i = minted.nodes.${p.identifier}.identity or null;
+          in
+          !(builtins.isString i && i != "")
+        ) mintedRecs
+        ++ faultsOf (
+          p:
+          "minted node '${p.identifier}' is of kind '${
+            toString (minted.nodes.${p.identifier}.kind or null)
+          }', not its promotion's kind '${p.kind}'"
+        ) (p: (minted.nodes.${p.identifier}.kind or null) != p.kind) mintedRecs
+        ++ faultsOf (p: "minted node '${p.identifier}' has edges that are not its promotion's relata") (
+          p:
+          sorted (lib.mapAttrsToList (l: t: "${l}:${t}") p.relata)
+          != sorted (map (e: "${e.label}:${e.to}") (mintedEdgesOf p.identifier))
+        ) mintedRecs
+        ++ faultsOf (
+          e: "minted edge '${e.label}:${e.from}:${e.to}' is from '${e.from}', which is no minted node"
+        ) (e: !(builtins.elem e.from mintedIds)) minted.edges;
+      # The promoted nodes join the register by their kind: ONE node list (ADR-0012). The door has
+      # refused a head already registered, so `//` here only ever adds.
+      nodeRegister = builtins.foldl' (
+        acc: p:
+        acc
+        // {
+          ${p.kind} = (acc.${p.kind} or { }) // {
+            ${p.identifier} = { inherit (minted.nodes.${p.identifier}) identity content; };
+          };
+        }
+      ) register promotedRecs;
+      promotedEdges = builtins.concatMap (
+        p:
+        map (e: {
+          inherit (e) label;
+          src = e.from;
+          dst = e.to;
+          origin = {
+            kind = "rule";
+            derivations = witnessesOf p.identifier;
+          };
+        }) (mintedEdgesOf p.identifier)
+      ) promotedRecs;
       edgeOf = d: {
         inherit (d) label;
         src = builtins.elemAt d.relata 0;
@@ -251,15 +333,15 @@ let
         ) (builtins.attrNames relations.${label})
       ) (builtins.attrNames relations);
 
-      edges = declaredEdges ++ ruleEdges; # ONE edge list, one construction (ADR-0012)
+      edges = declaredEdges ++ ruleEdges ++ promotedEdges; # ONE edge list, one construction (ADR-0012)
 
       nodes = lib.concatMap (
         kind:
         map (id: {
           inherit id kind;
-          attrs = register.${kind}.${id};
-        }) (builtins.attrNames register.${kind})
-      ) (builtins.attrNames register);
+          attrs = nodeRegister.${kind}.${id};
+        }) (builtins.attrNames nodeRegister.${kind})
+      ) (builtins.attrNames nodeRegister);
 
       origins = lib.listToAttrs (
         map (e: {
@@ -272,7 +354,9 @@ let
       #    derived edge whose label is not on it, WITH NO DIAGNOSTIC. In this fleet `enrolled` is both
       #    a declared and a derived label, and a literal `[ "rings" ]` loses the derived
       #    `enrolled:hemony:full-circle` at exit 0 — a true edge gone and nothing said.
-      labels = lib.unique (builtins.attrNames relations ++ map (d: d.label) labelled);
+      labels = lib.unique (
+        builtins.attrNames relations ++ map (d: d.label) labelled ++ map (e: e.label) promotedEdges
+      );
 
       # ★★ THE DOOR: every reached edge is an IR key, or it is refused BY NAME. Containment and not
       #    equality, because the IR also holds declared edges the program never mentions.
@@ -301,7 +385,7 @@ let
               inherit kind;
             }
           ) rows
-        ) register
+        ) nodeRegister
         // {
           edge = lib.listToAttrs (
             map (e: {
@@ -314,7 +398,7 @@ let
           );
         };
 
-      kinds = lib.mapAttrs (k: _: { name = k; }) register;
+      kinds = lib.mapAttrs (k: _: { name = k; }) nodeRegister;
 
       # ★ `perLabel` is an attrset of ACCESSORS, label -> (id -> [targets]), NOT an edge list. The
       #   wrong shape fails LAZILY — a flat edge list here leaves `nodes` reading its full count at
@@ -325,10 +409,8 @@ let
     in
     if missing != [ ] then
       throw "gen-inspect: not an evaluated scope; missing field(s): ${builtins.concatStringsSep ", " missing}"
-    else if promotedHeads != [ ] then
-      throw "gen-inspect: ${
-        builtins.concatStringsSep ", " (map (h: "'${h}'") promotedHeads)
-      } is promoted to a node (gen-program's `promote`); the IR draws a rule head only as an edge, so a promoted head would be dropped from it, and materialize refuses it rather than drop it"
+    else if mintFaults != [ ] then
+      throw "gen-inspect: the subject's `minted` does not match the model's promoted heads: ${builtins.concatStringsSep "; " mintFaults}"
     else
       {
         inherit
@@ -388,6 +470,11 @@ let
       # No declaration is labelled, so gen-program's `reached` is `[ ]` without reading the model.
       declarations = [ ];
       model.verdict = _: "false";
+      # Nothing is promoted, so the mint is empty.
+      minted = {
+        nodes = { };
+        edges = [ ];
+      };
     };
 in
 {

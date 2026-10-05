@@ -64,6 +64,7 @@ let
     relations.housed.bourdon = [ ];
     declarations = strayDeclarations;
     model = strayModel;
+    minted = emptyMint;
   };
 
   # ── THE FIXTURE FOR THE UNDEFINED HEAD ──
@@ -95,6 +96,7 @@ let
       b = { };
     };
     relations = { };
+    minted = emptyMint;
     declarations = cycleDeclarations;
     model = genProgram.model {
       program = genProgram.program [
@@ -109,9 +111,10 @@ let
 
   # ── THE FIXTURE FOR THE PROMOTED HEAD ──
   # A bodied labelled edge and a promoted head under one guard (gen-program's `promote`, den-hoag-2quxu):
-  # both included. The IR draws a rule head only as an edge, so without the refusal the promoted head
-  # had no node, no edge and no origin at exit 0. Its control is the same subject without the
-  # promoted declaration, which materializes its edge.
+  # both included. The promoted head is a node only the caller's mint can give an identity, so the
+  # subject carries the mint's output as `minted`, and every mint that is not exactly the included
+  # promoted heads, well-formed, is refused by name. The live control of every mint door is the
+  # caller's real mint, which materializes the node and its two rule-origin edges.
   promotingDeclarations =
     promoted:
     [
@@ -145,28 +148,105 @@ let
       else
         [ ]
     );
-  promotingIr =
-    promoted:
+  # The caller's mint for `seam:a:b`: the relata's emitters at pass 0 and the promoted record at
+  # pass 1, in one closed run (ADR-0016 rulings 5, 7).
+  promotingMinted =
     let
-      declarations = promotingDeclarations promoted;
+      m = promotingModel true;
+      p = genProgram.ruleEdges m (promotingDeclarations true);
+      entity = i: {
+        pass = 0;
+        identifier = i;
+        kind = "v";
+        relata = { };
+        content = { };
+        site = "t:${i}";
+      };
+      all = genScope.mintStrata { } (
+        [
+          (entity "a")
+          (entity "b")
+        ]
+        ++ map (r: r // { pass = 1; }) p.promoted
+      );
     in
-    genInspect.materialize {
-      register.v = {
-        a = { };
-        b = { };
-      };
-      relations = { };
-      inherit declarations;
-      model = genProgram.model {
-        program = genProgram.program [
-          "a"
-          "b"
-        ] declarations;
-        interpretation = [ ];
-        prior = null;
-        complete = true;
-      };
+    {
+      nodes = { inherit (all.nodes) "seam:a:b"; };
+      edges = builtins.filter (e: e.from == "seam:a:b") all.edges;
     };
+  promotingModel =
+    promoted:
+    genProgram.model {
+      program = genProgram.program [
+        "a"
+        "b"
+      ] (promotingDeclarations promoted);
+      interpretation = [ ];
+      prior = null;
+      complete = true;
+    };
+  emptyMint = {
+    nodes = { };
+    edges = [ ];
+  };
+  promotingIrOf =
+    {
+      promoted ? true,
+      register ? {
+        v = {
+          a = { };
+          b = { };
+        };
+      },
+      minted,
+    }:
+    genInspect.materialize {
+      inherit register minted;
+      relations = { };
+      declarations = promotingDeclarations promoted;
+      model = promotingModel promoted;
+    };
+  withNode = n: promotingMinted // { nodes."seam:a:b" = n; };
+  realNode = promotingMinted.nodes."seam:a:b";
+  # Under `tryEval`, so a refuse-everything materialize reds every mint door with `assertion failed`
+  # instead of matching its pinned message.
+  mintControl =
+    let
+      good = promotingIrOf { minted = promotingMinted; };
+      control = builtins.tryEval (
+        builtins.deepSeq good.edges {
+          node = builtins.filter (n: n.id == "seam:a:b") good.nodes;
+          edges = map (e: "${e.label}:${e.src}:${e.dst}:${e.origin.kind}") (
+            builtins.filter (e: e.src == "seam:a:b") good.edges
+          );
+        }
+      );
+    in
+    control.success
+    &&
+      control.value == {
+        node = [
+          {
+            id = "seam:a:b";
+            kind = "seam";
+            attrs = {
+              inherit (realNode) identity;
+              content = { };
+            };
+          }
+        ];
+        edges = [
+          "left:seam:a:b:a:rule"
+          "right:seam:a:b:b:rule"
+        ];
+      };
+  refusedUnderControl =
+    bad:
+    assert mintControl;
+    builtins.deepSeq bad.edges bad;
+  mintRefusal =
+    fault:
+    exactly "gen-inspect: the subject's `minted` does not match the model's promoted heads: ${fault}";
 
   # ── THE FIXTURE FOR THE MODEL'S FORM ──
   # `./tests/ir.nix`'s `uncontested` subject with gen-scope's `solve` record in place of gen-program's
@@ -189,6 +269,7 @@ let
       b = { };
     };
     relations = { };
+    minted = emptyMint;
     declarations = solveRecordDeclarations;
     model = genScope.solve [ ] (
       genProgram.program [
@@ -310,19 +391,90 @@ in
       expectedError.msg = exactly "gen-program.ruleEdges: 'reach:a:b' is UNDEFINED (U); an edge has no third value, so the membership can be carried into the graph neither as an edge nor as its absence, and is refused rather than collapsed. Read its answer through the model's `resolve` and handle 'U'";
     };
 
-    # ── DOOR 12: ★ A PROMOTED HEAD IS REFUSED BY NAME, NOT DROPPED ──
-    # The live control runs inside the cell under `tryEval`, so a refuse-everything materialize reds
-    # it with `assertion failed` instead of matching the pinned message.
-    test-a-promoted-head-is-refused-by-name = {
-      expr =
-        let
-          control = builtins.tryEval (
-            builtins.deepSeq (promotingIr false).edges (map (e: e.origin.kind) (promotingIr false).edges)
-          );
-        in
-        assert control.success && control.value == [ "rule" ];
-        builtins.deepSeq (promotingIr true).edges (promotingIr true);
-      expectedError.msg = exactly "gen-inspect: 'seam:a:b' is promoted to a node (gen-program's `promote`); the IR draws a rule head only as an edge, so a promoted head would be dropped from it, and materialize refuses it rather than drop it";
+    # ── DOOR 12: ★ AN INCLUDED PROMOTED HEAD WITH NO MINTED NODE IS REFUSED, NOT DROPPED ──
+    # Each mint door's live control is `mintControl`, the caller's real mint, under `tryEval`.
+    test-an-included-promoted-head-with-no-minted-node-is-refused-by-name = {
+      expr = refusedUnderControl (promotingIrOf {
+        minted = emptyMint;
+      });
+      expectedError.msg = mintRefusal "'seam:a:b' is an included promoted head with no minted node";
+    };
+
+    # ── DOOR 13: A MINTED NODE WITHOUT A NON-EMPTY STRING IDENTITY ──
+    test-a-minted-node-with-no-identity-is-refused-by-name = {
+      expr = refusedUnderControl (promotingIrOf {
+        minted = withNode (removeAttrs realNode [ "identity" ]);
+      });
+      expectedError.msg = mintRefusal "minted node 'seam:a:b' carries no identity";
+    };
+
+    # A present `identity` is not an identity: `null` was admitted at exit 0 by a presence test.
+    test-a-minted-node-with-a-null-identity-is-refused-by-name = {
+      expr = refusedUnderControl (promotingIrOf {
+        minted = withNode (realNode // { identity = null; });
+      });
+      expectedError.msg = mintRefusal "minted node 'seam:a:b' carries no identity";
+    };
+
+    # ── DOOR 14: A MINTED NODE OF ANOTHER KIND ──
+    # Without it the IR drew `seam/hem:0`: the record's kind beside another kind's identity.
+    test-a-minted-node-of-another-kind-is-refused-by-name = {
+      expr = refusedUnderControl (promotingIrOf {
+        minted = withNode (
+          realNode
+          // {
+            kind = "hem";
+            identity = "hem:0";
+          }
+        );
+      });
+      expectedError.msg = mintRefusal "minted node 'seam:a:b' is of kind 'hem', not its promotion's kind 'seam'";
+    };
+
+    # ── DOOR 15: A MINTED HEAD THAT IS ALREADY A REGISTERED NODE ──
+    # Under its own kind the register's attrs were overwritten; under another kind the IR held two
+    # nodes of one id. Both at exit 0.
+    test-a-minted-head-already-registered-is-refused-by-name = {
+      expr = refusedUnderControl (promotingIrOf {
+        register = {
+          v = {
+            a = { };
+            b = { };
+            "seam:a:b" = { };
+          };
+          seam."seam:a:b".stale = true;
+        };
+        minted = promotingMinted;
+      });
+      expectedError.msg = mintRefusal "minted node 'seam:a:b' is already a registered node, of kind(s) seam, v";
+    };
+
+    # ── DOOR 16: A MINTED EDGE FROM NO MINTED NODE ──
+    # Drawn per minted node, such an edge was in no node's set and was silently absent from the IR.
+    test-a-minted-edge-from-no-minted-node-is-refused-by-name = {
+      expr = refusedUnderControl (promotingIrOf {
+        minted = promotingMinted // {
+          edges = promotingMinted.edges ++ [
+            {
+              from = "seam:ghost";
+              to = "a";
+              label = "left";
+            }
+          ];
+        };
+      });
+      expectedError.msg = mintRefusal "minted edge 'left:seam:ghost:a' is from 'seam:ghost', which is no minted node";
+    };
+
+    # ── DOOR 17: A MINT CARRIED BY A SUBJECT THAT PROMOTES NOTHING ──
+    # `minted` is required, so the door always runs; read only when a declaration was promoted, this
+    # mint was ignored at exit 0.
+    test-a-mint-on-a-subject-that-promotes-nothing-is-refused-by-name = {
+      expr = refusedUnderControl (promotingIrOf {
+        promoted = false;
+        minted = promotingMinted;
+      });
+      expectedError.msg = mintRefusal "minted node 'seam:a:b' is not a promoted head this model includes";
     };
 
     # ── DOOR 8: ★ A QUALIFIER NO FROM/JOIN ITEM DECLARES ──
@@ -352,7 +504,7 @@ in
     # that is neither reaches this refusal.
     test-a-non-scope-is-refused-naming-every-missing-field = {
       expr = genInspect.mkInspector { register = { }; };
-      expectedError.msg = exactly "gen-inspect: not an evaluated scope; missing field(s): relations, declarations, model";
+      expectedError.msg = exactly "gen-inspect: not an evaluated scope; missing field(s): relations, declarations, model, minted";
     };
 
     test-a-partial-scope-names-only-what-is-missing = {
@@ -361,7 +513,7 @@ in
         relations = { };
         declarations = [ ];
       };
-      expectedError.msg = exactly "gen-inspect: not an evaluated scope; missing field(s): model";
+      expectedError.msg = exactly "gen-inspect: not an evaluated scope; missing field(s): model, minted";
     };
 
     # ── DOOR-CHECKS (den-hoag-7gp66 P1): `graphSubject`'s two named, catchable refusals, verbatim ──

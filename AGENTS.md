@@ -40,8 +40,10 @@ so an APPLIED output here would abort every hub evaluation with `attempt to call
   **condensation-depth stamp** and not per-atom provenance. Its rule edges are gen-program's
   `(ruleEdges model declarations).reached`, never a parsed atom, so an UNDEFINED head refuses by
   name (gen-program's refusal). Carries three doors of its own: the missing-field refusal, the
-  reached-edge-with-no-IR-edge refusal and the promoted-head refusal (a gen-program `promote`
-  declaration has no IR rendering, so it is refused by name rather than dropped; Door 12). The subject's `model` is gen-program's result record
+  reached-edge-with-no-IR-edge refusal and the mint door (an included gen-program `promote` head
+  is a node read from the subject's required `minted`, the caller's mint output; a minted node set
+  that is not exactly those heads, or a node or edge of the wrong shape, is refused by name rather
+  than drawn or dropped; Doors 12–17, a shape door only). The subject's `model` is gen-program's result record
   (`program.model`), not a gen-scope solve record: a solve record is refused by gen-program's door
   and the refusal passes through (`tests-error.nix`, Door 11).
 - **`extras.nix`** — gen-prelude plus the seven names the copied parser needs. **Not nixpkgs `lib`.**

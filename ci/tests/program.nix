@@ -154,6 +154,10 @@ let
         b = { };
       };
       relations.l.a = [ "b" ];
+      minted = {
+        nodes = { };
+        edges = [ ];
+      };
       inherit declarations;
       model = genProgram.model {
         program = genProgram.program [

@@ -20,6 +20,8 @@ i = genInspect.mkInspector {
   relations = { … };   # label -> src -> [ dst ]
   declarations = …;    # gen-program declarations; one carrying `label` denotes an edge
   model     = program.model { … };  # gen-program's result record for these declarations
+  minted    = { nodes = { … }; edges = [ … ]; };  # the caller's mint output for its included
+                                                  # promoted heads; { nodes = { }; edges = [ ]; } if none
 };
 
 i.facts                    # the IR
@@ -69,10 +71,17 @@ makes origin derivable at all.
 here.** A declaration's `label` names the edge its head denotes, `{ from = relata[0]; to = relata[1]; label; }`. `reached` refuses by name every answer an edge list cannot carry, so a labelled head
 the well-founded model leaves **undefined** is refused rather than dropped.
 
-**A promoted head is refused by name.** A declaration carrying gen-program's `promote` makes its
-included head a node, whose identity only the caller's mint supplies. The IR draws a rule head only
-as an edge, read off `reached`, which holds no promotion, so `materialize` refuses a subject with a
-promoted declaration, naming the head, rather than drop it at exit 0 (`tests-error.nix`, Door 12).
+**A promoted head is a node, read from the caller's mint.** A declaration carrying gen-program's
+`promote` makes its included head a node, whose identity only the caller's mint supplies, so the
+subject carries the mint's output as `minted` (gen-scope `mintStrata`'s `{ nodes; edges; }`,
+projected to the included promoted heads) and this library mints nothing. Each minted node joins
+`nodes` by its kind and its edges join `edges` with a `rule` origin. `minted` is required, empty when
+nothing is promoted, and `materialize` refuses it by name, listing every fault, unless its nodes are
+exactly the included promoted heads, none already registered, each with a non-empty string `identity`
+and its promotion's `kind`, with edges exactly its promotion's relata and no edge from anything else
+(`tests-error.nix`, Doors 12–17). **That is a shape door, not ADR-0016 ruling 5's refusal:** the
+mint's node record carries no provenance mark, so a well-formed identity this library cannot
+re-derive is taken from the caller, as `model` is.
 
 **The subject's `model` is gen-program's result record.** It is the value `program.model` returns,
 solved from the subject's own `declarations`. It carries the rules the verdicts were solved from,

@@ -77,6 +77,10 @@ let
         };
         relations = { };
         inherit declarations model;
+        minted = {
+          nodes = { };
+          edges = [ ];
+        };
       };
     };
   reachedOf =

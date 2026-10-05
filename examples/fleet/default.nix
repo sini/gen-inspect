@@ -186,6 +186,11 @@ let
       declarations
       model
       ;
+    # No declaration is promoted, so the caller's mint output is empty.
+    minted = {
+      nodes = { };
+      edges = [ ];
+    };
   };
 in
 {
