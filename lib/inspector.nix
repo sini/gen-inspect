@@ -42,9 +42,9 @@ let
       query =
         text:
         let
-          routed = compile.compile facts (door.check facts (sql.parseSql text));
+          routed = compile.compile (door.check (sql.parseSql text) facts) facts;
         in
-        executor.evalQuery routed.tables routed.ast;
+        executor.evalQuery routed.ast routed.tables;
 
       # THE DERIVATION OF ONE ATOM: an IR key's `origin`, or a `reaches` atom's one-step witnesses.
       why = compile.why facts;
@@ -53,7 +53,7 @@ let
       # is a VALUE built from gen-select's constructors, so there is no name to mistype and nothing
       # for a known-set comparison to do. Its result is an IR′, which is why it composes with
       # `render` and with itself.
-      select = selecting.select genSelect facts;
+      select = selector: selecting.select genSelect selector facts;
 
       # The AST, for a caller that wants the parse without the run.
       parse = sql.parseSql;
@@ -78,5 +78,5 @@ in
   # The degenerate case, through the explicit wrapper rather than a shape probe: a probe would
   # silently accept a graph as a scope and answer about an empty program, so the missing-field
   # refusal that `materialize` raises stays NAMED for everything that is neither.
-  fromGraph = args: checked (materialize.graphSubject args);
+  fromGraph = materialize.fromGraphWith checked;
 }

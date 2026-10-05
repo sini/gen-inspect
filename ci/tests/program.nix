@@ -93,7 +93,7 @@ let
   };
 
   # ── FIXTURES ──
-  cycle = genInspect.fromGraph {
+  cycle = genInspect.fromGraph { } {
     nodes = [
       "second"
       "third"
@@ -111,7 +111,7 @@ let
       .${n} or [ ];
   };
 
-  danglingDeclared = genInspect.fromGraph {
+  danglingDeclared = genInspect.fromGraph { } {
     nodes = [
       "a"
       "b"
@@ -172,7 +172,7 @@ let
     };
 
   # gen-demo C25's three declared edges.
-  c25 = genInspect.fromGraph {
+  c25 = genInspect.fromGraph { } {
     nodes = [
       "damask"
       "faille"
@@ -208,7 +208,7 @@ let
         }) (i.query "SELECT src, dst, via FROM reaches")
       );
     in
-    genInspect.evalQuery (i.facts.tables // { reaches = full; }) (genInspect.parseSql text);
+    genInspect.evalQuery (genInspect.parseSql text) (i.facts.tables // { reaches = full; });
   selfJoin = "SELECT r2.dst FROM reaches r1 JOIN reaches r2 ON r1.dst = r2.src WHERE r1.src = 'evensong' AND r1.via = 'hung' AND r2.via = 'rings' ORDER BY r2.dst";
   unqualified = "SELECT r.src, r.dst FROM reaches r JOIN edge e ON r.dst = e.dst WHERE src = 'bourdon' AND via = '*'";
 in

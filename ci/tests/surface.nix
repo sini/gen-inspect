@@ -19,7 +19,7 @@ let
   q = i.query;
 
   # THE DEGENERATE CASE: any gen-graph labeled value, through the EXPLICIT wrapper.
-  plain = genInspect.fromGraph {
+  plain = genInspect.fromGraph { } {
     nodes = [
       "hemony"
       "rudhall"

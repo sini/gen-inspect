@@ -324,11 +324,12 @@ let
       parseSql = (import ./sql.nix { inherit lib; }).parseSql;
       ast = parseSql sqlString;
     in
-    evalQuery fleet ast;
+    evalQuery ast fleet;
 
-  # Evaluate a parsed AST against fleet data
+  # Evaluate a parsed AST against fleet data. SUBJECT LAST (den-hoag-7gp66 P2, rule 4): the AST is
+  # the configuration, the table map it runs over is the subject, so `evalQuery ast fleet`.
   evalQuery =
-    fleet: ast:
+    ast: fleet:
     let
       # FROM clause
       fromKind = resolveKind ast.from.kind;

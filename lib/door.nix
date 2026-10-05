@@ -185,8 +185,10 @@ let
   #   "unknown name 'src'; known: ", which tells a reader to check the spelling of a correct column
   #   and never mentions the construct. The construct refusal is `compile`'s and it is the only one
   #   this query should see.
+  # SUBJECT LAST (den-hoag-7gp66 P2, rule 4): the query is the configuration, the IR it is checked
+  # against is the subject, so `door ast ir`, the order `compile` takes.
   check =
-    ir: ast:
+    ast: ir:
     let
       tableNames = [ ast.from.kind ] ++ map (j: j.kind) (ast.joins or [ ]);
       tables = map (checkTable ir) tableNames;

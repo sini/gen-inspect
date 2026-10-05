@@ -516,11 +516,11 @@ in
       expectedError.msg = exactly "gen-inspect: not an evaluated scope; missing field(s): model, minted";
     };
 
-    # ── DOOR-CHECKS (den-hoag-7gp66 P1): `graphSubject`'s two named, catchable refusals, verbatim ──
-    # `./tests/doors.nix` already proves each one is CATCHABLE (`tryEval` + `deepSeq`); these two pin
-    # WHICH message fired and that it names the door first (R6), matching this file's own idiom.
+    # ── DOOR-CHECKS (den-hoag-7gp66 P2): `graphSubject`'s three named, catchable refusals, verbatim ──
+    # `./tests/doors.nix` already proves each one is CATCHABLE at its own step's application; these
+    # pin WHICH message fired and that it names the door first (R6), matching this file's own idiom.
     test-graphsubject-missing-required-field-names-the-door = {
-      expr = builtins.deepSeq (genInspect.graphSubject { nodes = [ "a" ]; }) null;
+      expr = builtins.deepSeq (genInspect.graphSubject { } { nodes = [ "a" ]; }) null;
       expectedError.msg = exactly "gen-inspect.graphSubject: required field 'perLabel' is missing (required: 'nodes', 'perLabel') (in prelude.checkRequired)";
     };
 
@@ -529,7 +529,7 @@ in
     test-a-node-with-two-parent-targets-is-refused-by-the-lift = {
       expr =
         let
-          g = genInspect.fromGraph {
+          g = genInspect.fromGraph { } {
             nodes = [
               "a"
               "b"
@@ -557,12 +557,17 @@ in
     };
 
     test-graphsubject-unknown-option-names-the-door = {
-      expr = builtins.deepSeq (genInspect.graphSubject {
+      expr = builtins.seq (genInspect.graphSubject { zzgi9k3qx = 1; }) null;
+      expectedError.msg = exactly "gen-inspect.graphSubject: 'zzgi9k3qx' is not an option of this door; the options are closed (accepted: 'kind') (in prelude.checkOptions)";
+    };
+    # G10: the option given on the graph record is refused by name, naming the options step.
+    test-graphsubject-option-on-the-record-names-the-door = {
+      expr = builtins.seq (genInspect.graphSubject { } {
         nodes = [ "a" ];
         perLabel = { };
-        zzgi9k3qx = 1;
+        kind = "node";
       }) null;
-      expectedError.msg = exactly "gen-inspect.graphSubject: 'zzgi9k3qx' is not an option of this door; the options are closed (accepted: 'nodes', 'perLabel', 'kind') (in prelude.checkOptions)";
+      expectedError.msg = exactly "gen-inspect.graphSubject: 'kind' is an option of gen-inspect.graphSubject, not a field of this record (in prelude.checkGuarded)";
     };
   };
 }

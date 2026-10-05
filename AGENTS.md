@@ -33,6 +33,13 @@ so an APPLIED output here would abort every hub evaluation with `attempt to call
 
 `ci/tests/surface.nix` asserts that block against the library's own `attrNames`.
 
+**Argument shapes** (den-hoag-7gp66 P2: options first and closed, configuration before the subject,
+the subject last). `graphSubject { kind ? "vertex"; } { nodes; perLabel; }` and `fromGraph` (the same
+two steps, materialized) are the only record-taking doors: the options step is closed, and the graph
+record is open (an extra field is admitted) but refuses `kind` by name when it is given there instead
+of the options (`ci/tests/doors.nix`). The rest are positional: `compile ast ir`, `door ast ir`,
+`evalQuery ast tables`, `select genSelect selector ir`, `astToSelector aliases expr`, `materialize subject`, `mkInspector subject`, `parseSql text`, `tokenize text` and `render.<format> ir`.
+
 ## The modules
 
 - **`materialize.nix`** — the IR contract, and its one construction. `origin` is built here from
@@ -56,7 +63,7 @@ so an APPLIED output here would abort every hub evaluation with `attempt to call
 - **`door.nix`** — unknown table, unknown column, unknown label, kind and `via` value, unknown `src`
   on a `reaches` query, unknown or duplicate qualifier (a FROM/JOIN item's qualifier is its alias,
   else its table name).
-- **`select.nix`** — IR + selector → IR′, carrying origins forward.
+- **`select.nix`** — `select genSelect selector ir` → IR′, carrying origins forward.
 - **`render.nix`** — mermaid, dot, JSON. Reads the IR, never the scope.
 - **`inspector.nix`** — `mkInspector scope → { facts, select, query, parse, render, why }`.
 

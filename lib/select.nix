@@ -39,8 +39,10 @@ let
     siblings = _: [ ];
   };
 
+  # SUBJECT LAST (den-hoag-7gp66 P2, rule 4): the selector library and the selector are configuration,
+  # the IR they narrow is the subject, so `select genSelect selector ir`.
   select =
-    genSelect: ir: selector:
+    genSelect: selector: ir:
     let
       ctx = mkNodeContext ir;
       keptNodes = builtins.filter (n: genSelect.matches selector n.id ctx) ir.nodes;
