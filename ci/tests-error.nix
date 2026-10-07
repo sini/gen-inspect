@@ -30,6 +30,9 @@
 let
   exactly = msg: "^" + genPrelude.escapeRegex msg + "$";
   contains = msg: genPrelude.escapeRegex msg;
+  # gen-prelude's refusal text, composed with this library's own literal door, field and accepted
+  # set (den-hoag-7jltk): every assertion kept, none of gen-prelude's wording copied.
+  inherit (genPrelude) refusals;
 
   q = admitted.inspector.query;
 
@@ -287,7 +290,13 @@ in
     # gen-program reword reds this cell at the next relock, as Door 10 does.
     test-a-gen-scope-solve-record-as-the-model-is-refused-by-name = {
       expr = builtins.deepSeq solveRecordIr.edges solveRecordIr;
-      expectedError.msg = exactly "gen-program.ruleEdges: the `model` operand (a gen-program result record): required field 'complete' is missing (required: 'complete', 'resolve', 'rules') (in prelude.checkRequired)";
+      expectedError.msg = exactly (
+        refusals.missingField "gen-program.ruleEdges: the `model` operand (a gen-program result record)" [
+          "complete"
+          "resolve"
+          "rules"
+        ] "complete"
+      );
     };
 
     # ── DOOR 1: an unknown table, refused by name WITH THE KNOWN SET ──
@@ -522,7 +531,9 @@ in
     # pin WHICH message fired and that it names the door first (R6), matching this file's own idiom.
     test-graphsubject-missing-required-field-names-the-door = {
       expr = builtins.deepSeq (genInspect.graphSubject { } { nodes = [ "a" ]; }) null;
-      expectedError.msg = exactly "gen-inspect.graphSubject: required field 'perLabel' is missing (required: 'nodes', 'perLabel') (in prelude.checkRequired)";
+      expectedError.msg = exactly (
+        refusals.missingField "gen-inspect.graphSubject" [ "nodes" "perLabel" ] "perLabel"
+      );
     };
 
     # Containment is a function, so the lift refuses a second `parent` target by name where the walk
@@ -559,7 +570,9 @@ in
 
     test-graphsubject-unknown-option-names-the-door = {
       expr = builtins.seq (genInspect.graphSubject { zzgi9k3qx = 1; }) null;
-      expectedError.msg = exactly "gen-inspect.graphSubject: 'zzgi9k3qx' is not an option of this door; the options are closed (accepted: 'kind') (in prelude.checkOptions)";
+      expectedError.msg = exactly (
+        refusals.unknownOption "gen-inspect.graphSubject" [ "kind" ] "zzgi9k3qx"
+      );
     };
     # G10: the option given on the graph record is refused by name, naming the options step.
     test-graphsubject-option-on-the-record-names-the-door = {
@@ -568,7 +581,9 @@ in
         perLabel = { };
         kind = "node";
       }) null;
-      expectedError.msg = exactly "gen-inspect.graphSubject: 'kind' is an option of gen-inspect.graphSubject, not a field of this record (in prelude.checkGuarded)";
+      expectedError.msg = exactly (
+        refusals.guardedField "gen-inspect.graphSubject" "gen-inspect.graphSubject" "kind"
+      );
     };
   };
 }
