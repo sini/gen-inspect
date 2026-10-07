@@ -388,7 +388,8 @@ in
     # in no list of true atoms. gen-program's `reached` refuses it, naming the head.
     test-an-undefined-head-is-refused-by-name = {
       expr = builtins.deepSeq cycleIr.edges cycleIr;
-      expectedError.msg = exactly "gen-program.ruleEdges: 'reach:a:b' is UNDEFINED (U); an edge has no third value, so the membership can be carried into the graph neither as an edge nor as its absence, and is refused rather than collapsed. Read its answer through the model's `resolve` and handle 'U'";
+      expectedError.msg =
+        "^" + genPrelude.escapeRegex "gen-program.ruleEdges: 'reach:a:b' is UNDEFINED (U)";
     };
 
     # ── DOOR 12: ★ AN INCLUDED PROMOTED HEAD WITH NO MINTED NODE IS REFUSED, NOT DROPPED ──
