@@ -281,6 +281,33 @@ let
       ] solveRecordDeclarations
     );
   };
+  # ── THE VIEW OPTIONS' FIXTURE ──
+  renderOptions = [
+    "direction"
+    "shapeOf"
+    "labelOf"
+    "nest"
+  ];
+  parentEdge = src: dst: {
+    inherit src dst;
+    label = "parent";
+    origin.kind = "declaration";
+  };
+  renderIr = {
+    nodes =
+      map
+        (id: {
+          inherit id;
+          kind = "k";
+        })
+        [
+          "a"
+          "b"
+          "c"
+        ];
+    edges = [ (parentEdge "a" "b") ];
+  };
+
 in
 {
   flake.testsError = {
@@ -584,6 +611,73 @@ in
       expectedError.msg = exactly (
         refusals.guardedField "gen-inspect.graphSubject" "gen-inspect.graphSubject" "kind"
       );
+    };
+
+    # ── THE VIEW OPTIONS: every refusal names the renderer the caller invoked (R6) ──
+    test-a-renderer-refuses-an-unknown-option-by-name = {
+      expr = builtins.seq (genInspect.render.mermaid { zzgi9k3qx = 1; }) null;
+      expectedError.msg = exactly (
+        refusals.unknownOption "gen-inspect.render.mermaid" renderOptions "zzgi9k3qx"
+      );
+    };
+    # The as-built call shape, `render.dot ir`: the IR is read as an options set, and `edges` is no option.
+    test-the-ir-first-call-shape-is-refused-by-name = {
+      expr = builtins.seq (genInspect.render.dot renderIr) null;
+      expectedError.msg = exactly (refusals.unknownOption "gen-inspect.render.dot" renderOptions "edges");
+    };
+    test-an-unknown-direction-is-refused-by-name = {
+      expr = genInspect.render.mermaid { direction = "UP"; } renderIr;
+      expectedError.msg = exactly "gen-inspect.render.mermaid: direction 'UP' is not a direction (accepted: BT, LR, RL, TB, TD)";
+    };
+    test-an-unknown-shape-is-refused-by-name = {
+      expr = genInspect.render.dot { shapeOf = _: "blob"; } renderIr;
+      expectedError.msg = exactly "gen-inspect.render.dot: shapeOf returned 'blob' for kind 'k', which is no shape (accepted: null, circle, cylinder, hexagon, rect, rhombus, round)";
+    };
+    test-a-non-string-label-is-refused-by-name = {
+      expr = genInspect.render.mermaid { labelOf = _: 1; } renderIr;
+      expectedError.msg = exactly "gen-inspect.render.mermaid: labelOf returned an int for node 'a', not a string";
+    };
+    test-a-non-function-label-of-is-refused-by-name = {
+      expr = genInspect.render.dot { labelOf = "a"; } renderIr;
+      expectedError.msg = exactly "gen-inspect.render.dot: labelOf must be a function from a node to a string, not 'a'";
+    };
+    test-a-non-function-shape-of-is-refused-by-name = {
+      expr = genInspect.render.mermaid { shapeOf = { }; } renderIr;
+      expectedError.msg = exactly "gen-inspect.render.mermaid: shapeOf must be a function from a kind to a shape or null, not a set";
+    };
+    test-a-non-bool-nest-is-refused-by-name = {
+      expr = genInspect.render.dot { nest = "yes"; } renderIr;
+      expectedError.msg = exactly "gen-inspect.render.dot: nest must be a bool, not 'yes'";
+    };
+    test-a-vertex-with-two-parents-is-refused-by-name = {
+      expr = genInspect.render.mermaid { nest = true; } (
+        renderIr
+        // {
+          edges = renderIr.edges ++ [ (parentEdge "a" "c") ];
+        }
+      );
+      expectedError.msg = exactly "gen-inspect.render.mermaid: 'a' has 2 'parent' targets ([\"b\",\"c\"]); nesting draws containment, which is a function, so a vertex has at most one parent";
+    };
+    test-a-parent-cycle-is-refused-by-name = {
+      expr = genInspect.render.dot { nest = true; } (
+        renderIr
+        // {
+          edges = renderIr.edges ++ [
+            (parentEdge "b" "c")
+            (parentEdge "c" "a")
+          ];
+        }
+      );
+      expectedError.msg = exactly "gen-inspect.render.dot: the 'parent' edges form a cycle ([\"a\",\"b\",\"c\"]); nesting draws containment, which is a forest";
+    };
+    test-a-vertex-that-is-its-own-parent-is-refused-by-name = {
+      expr = genInspect.render.mermaid { nest = true; } (
+        renderIr
+        // {
+          edges = [ (parentEdge "a" "a") ];
+        }
+      );
+      expectedError.msg = exactly "gen-inspect.render.mermaid: the 'parent' edges form a cycle ([\"a\"]); nesting draws containment, which is a forest";
     };
   };
 }

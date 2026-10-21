@@ -28,8 +28,8 @@ let
   # them counts matches. A line count would read 1 for a renderer emitting every edge on one line.
   occ = needle: hay: builtins.length (builtins.filter builtins.isList (builtins.split needle hay));
 
-  mermaid = admitted.inspector.render.mermaid;
-  dot = admitted.inspector.render.dot;
+  mermaid = admitted.inspector.render.mermaid { };
+  dot = admitted.inspector.render.dot { };
 
   lines = s: builtins.filter (l: builtins.isString l && l != "") (builtins.split "\n" s);
 
@@ -161,6 +161,184 @@ let
         map (builtins.match "  \"((\\\\.|[^\"\\\\])*)\" \\[label=\"((\\\\.|[^\"\\\\])*)\"];") (lines src)
       )
     );
+
+  # ── THE VIEW OPTIONS ──
+  # A node line in any shape: the handle, the opening bracket, the quoted text, the closing bracket.
+  shapedLines =
+    src:
+    builtins.filter (m: m != null) (
+      map (builtins.match " *(n[0-9]+)([[({]+)\"([^\"]*)\"([])}]+)") (lines src)
+    );
+  mermaidTexts = src: map (m: decodeMermaid (idOf (builtins.elemAt m 2))) (shapedLines src);
+  idOf = label: builtins.head (builtins.split "<br/>" label);
+
+  # Every kind is a shape's name, plus `plain`, which `shapeOf` maps to null: the renderer's default.
+  shapeKinds = [
+    "circle"
+    "cylinder"
+    "hexagon"
+    "plain"
+    "rect"
+    "rhombus"
+    "round"
+  ];
+  shaped = {
+    nodes = map (k: {
+      id = "v-${k}";
+      kind = k;
+    }) shapeKinds;
+    edges = [ ];
+  };
+  shapeOf = k: if k == "plain" then null else k;
+
+  # Containment four deep over ids the handle and the escape must keep apart (`x"y` titles a cluster,
+  # so its quote reaches the title's escape); `ghost` is a parent no
+  # node lists, `cluster:a-b` is the name a naive dot cluster would give `a-b`, and the second
+  # `a_b -> a-b` is the same parent twice, which is one parent.
+  nestIr = {
+    nodes =
+      map
+        (id: {
+          inherit id;
+          kind = "k";
+        })
+        [
+          "a-b"
+          "a_b"
+          "x\"y"
+          "end"
+          "cluster:a-b"
+          "solo"
+          "q"
+        ];
+    edges = [
+      {
+        src = "a_b";
+        dst = "a-b";
+        label = "parent";
+        origin.kind = "declaration";
+      }
+      {
+        src = "x\"y";
+        dst = "a_b";
+        label = "parent";
+        origin.kind = "rule";
+      }
+      {
+        src = "q";
+        dst = "x\"y";
+        label = "parent";
+        origin.kind = "declaration";
+      }
+      {
+        src = "end";
+        dst = "ghost";
+        label = "parent";
+        origin.kind = "declaration";
+      }
+      {
+        src = "solo";
+        dst = "a-b";
+        label = "l|m";
+        origin.kind = "declaration";
+      }
+      {
+        src = "a_b";
+        dst = "a-b";
+        label = "parent";
+        origin.kind = "declaration";
+      }
+    ];
+  };
+  # Where each vertex sits: the titles of the clusters around it, outermost first. A container sits
+  # inside its own cluster.
+  nestExpected = {
+    "a-b" = [ "a-b" ];
+    "a_b" = [
+      "a-b"
+      "a_b"
+    ];
+    "x\"y" = [
+      "a-b"
+      "a_b"
+      "x\"y"
+    ];
+    "q" = [
+      "a-b"
+      "a_b"
+      "x\"y"
+    ];
+    "end" = [ "ghost" ];
+    "ghost" = [ "ghost" ];
+    "cluster:a-b" = [ ];
+    "solo" = [ ];
+  };
+  # One reader for both grammars: an `open` line pushes its decoded title, a `close` line pops, and
+  # a node line records the stack under its decoded text.
+  readNest =
+    {
+      open,
+      close,
+      node,
+    }:
+    src:
+    (builtins.foldl'
+      (
+        acc: l:
+        let
+          o = open l;
+          n = node l;
+        in
+        if o != null then
+          acc // { stack = acc.stack ++ [ o ]; }
+        else if close l && acc.stack != [ ] then
+          acc // { stack = lib.init acc.stack; }
+        else if n != null then
+          acc
+          // {
+            at = acc.at // {
+              ${n} = acc.stack;
+            };
+          }
+        else
+          acc
+      )
+      {
+        stack = [ ];
+        at = { };
+      }
+      (lines src)
+    ).at;
+  readMermaidNest = readNest {
+    open =
+      l:
+      let
+        m = builtins.match " *subgraph g[0-9]+\\[\"([^\"]*)\"]" l;
+      in
+      if m == null then null else decodeMermaid (builtins.head m);
+    close = l: builtins.match " *end" l != null;
+    node =
+      l:
+      let
+        m = builtins.match " *n[0-9]+[[({]+\"([^\"]*)\"[])}]+" l;
+      in
+      if m == null then null else decodeMermaid (idOf (builtins.head m));
+  };
+  readDotNest = readNest {
+    open =
+      l:
+      let
+        m = builtins.match " *subgraph \"cluster:((\\\\.|[^\"\\\\])*)\" \\{" l;
+      in
+      if m == null then null else decodeDot (builtins.head m);
+    close = l: builtins.match " *}" l != null;
+    node =
+      l:
+      let
+        m = builtins.match " *\"((\\\\.|[^\"\\\\])*)\" \\[label=.*" l;
+      in
+      if m == null then null else decodeDot (builtins.head m);
+  };
 
   # THE RED ARM, BUILT: every edge claims a declaration origin.
   allSolid = ir // {
@@ -326,6 +504,155 @@ in
         )
       );
       expected = 0;
+    };
+
+    # ── THE VIEW OPTIONS ──
+    test-direction-heads-both-renderers = {
+      expr = {
+        mermaid = builtins.head (lines (admitted.inspector.render.mermaid { direction = "TD"; } ir));
+        dot = builtins.elemAt (lines (admitted.inspector.render.dot { direction = "TD"; } ir)) 1;
+      };
+      expected = {
+        mermaid = "flowchart TD";
+        dot = "  rankdir=TB;";
+      };
+    };
+
+    # The bracket pair per shape, and null as the renderer's own default, read from the lines.
+    test-shape-of-a-kind-brackets-its-nodes-in-mermaid = {
+      expr = map (m: "${builtins.elemAt m 1}${builtins.elemAt m 3}") (
+        shapedLines (admitted.inspector.render.mermaid { inherit shapeOf; } shaped)
+      );
+      expected = [
+        "(())"
+        "[()]"
+        "{{}}"
+        "[]"
+        "[]"
+        "{}"
+        "()"
+      ];
+    };
+
+    test-shape-of-a-kind-sets-its-dot-shape = {
+      expr = map (l: builtins.head (builtins.match ".*\\[label=\"[^\"]*\"(.*)];" l)) (
+        builtins.filter (l: builtins.match ".*\\[label=.*" l != null) (
+          lines (admitted.inspector.render.dot { inherit shapeOf; } shaped)
+        )
+      );
+      expected = [
+        ", shape=circle"
+        ", shape=cylinder"
+        ", shape=hexagon"
+        ""
+        ", shape=box"
+        ", shape=diamond"
+        ", shape=box, style=rounded"
+      ];
+    };
+
+    # The label replaces the id's text and passes the same escape; an endpoint no node lists keeps its id.
+    test-label-of-a-node-reads-back-through-the-escape = {
+      expr = lib.sort builtins.lessThan (
+        mermaidTexts (admitted.inspector.render.mermaid { labelOf = n: "L${n.id}"; } hostile)
+      );
+      expected = lib.sort builtins.lessThan (map (id: "L${id}") hostileIds ++ [ "ghost" ]);
+    };
+
+    test-label-of-a-node-reads-back-in-dot = {
+      expr = dotNodeLabels (admitted.inspector.render.dot { labelOf = n: "L${n.id}"; } hostile);
+      expected = map (id: "L${id}\nk") hostileIds ++ [ "ghost" ];
+    };
+
+    test-nest-draws-containment-as-mermaid-subgraphs = {
+      expr = readMermaidNest (admitted.inspector.render.mermaid { nest = true; } nestIr);
+      expected = nestExpected;
+    };
+
+    test-nest-draws-containment-as-dot-clusters = {
+      expr = readDotNest (admitted.inspector.render.dot { nest = true; } nestIr);
+      expected = nestExpected;
+    };
+
+    # Nesting adds clusters and removes nothing: the `parent` edges are still drawn, the rule's dashed.
+    test-nest-keeps-every-edge = {
+      expr = builtins.filter (l: builtins.match "  n[0-9]+ (-->|-\\.->).*" l != null) (
+        lines (admitted.inspector.render.mermaid { nest = true; } nestIr)
+      );
+      expected = builtins.filter (l: builtins.match "  n[0-9]+ (-->|-\\.->).*" l != null) (
+        lines (admitted.inspector.render.mermaid { } nestIr)
+      );
+    };
+
+    # The nested fragment: a cluster id is `g<i>`, never an `n<i>` handle, and every title is quoted.
+    test-nested-mermaid-is-in-the-accepted-fragment = {
+      expr = builtins.filter (
+        l:
+        l != "flowchart LR"
+        && builtins.match " +n[0-9]+\\[\"[^\"]*\"]" l == null
+        && builtins.match " +subgraph g[0-9]+\\[\"[^\"]*\"]" l == null
+        && builtins.match " +end" l == null
+        && builtins.match "  n[0-9]+ (-->|-\\.->)\\|\"[^\"]*\"\\| n[0-9]+" l == null
+      ) (lines (admitted.inspector.render.mermaid { nest = true; } nestIr));
+      expected = [ ];
+    };
+
+    # Without `nest` a `parent` cycle is three edges like any other: the refusals are nesting's.
+    test-control-without-nest-a-parent-cycle-renders = {
+      expr = occ "-->" (mermaid {
+        nodes = [ ];
+        edges =
+          map
+            (p: {
+              src = builtins.head p;
+              dst = builtins.elemAt p 1;
+              label = "parent";
+              origin.kind = "declaration";
+            })
+            [
+              [
+                "a"
+                "b"
+              ]
+              [
+                "b"
+                "c"
+              ]
+              [
+                "c"
+                "a"
+              ]
+            ];
+      });
+      expected = 3;
+    };
+
+    # mermaid refuses an empty `""` wherever a whole string stands (measured, mermaid-cli 11.17): an
+    # unlisted endpoint, an edge label and a subgraph title each write an empty text as an empty element.
+    test-an-empty-text-is-an-empty-element = {
+      expr = builtins.tail (
+        lines (mermaid {
+          nodes = [
+            {
+              id = "a";
+              kind = "k";
+            }
+          ];
+          edges = [
+            {
+              src = "a";
+              dst = "";
+              label = "";
+              origin.kind = "declaration";
+            }
+          ];
+        })
+      );
+      expected = [
+        "  n0[\"a<br/>k\"]"
+        "  n1[\"<b></b>\"]"
+        "  n0 -->|\"<b></b>\"| n1"
+      ];
     };
   };
 }

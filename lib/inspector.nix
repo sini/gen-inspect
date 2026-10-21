@@ -3,7 +3,7 @@
 # The library publishes PURE FUNCTIONS ONLY — no app, no CLI. The human entries are the nix ones:
 #
 #   nix eval --json .#inspect --apply 'i: i.query "SELECT src, dst FROM edge WHERE label = '\''rings'\''"'
-#   nix eval --raw  .#inspect --apply 'i: i.render.mermaid i.facts'
+#   nix eval --raw  .#inspect --apply 'i: i.render.mermaid { } i.facts'
 #   nix repl .#
 #
 # ★ ONE DOOR, BOTH ENTRIES THROUGH IT. `query` is the only text stage and every refusal it raises is

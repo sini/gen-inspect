@@ -46,13 +46,13 @@
         silenced = false;
       };
 
-      mermaidSource = fleet.inspector.render.mermaid fleet.inspector.facts;
+      mermaidSource = fleet.inspector.render.mermaid { } fleet.inspector.facts;
     in
     {
       # THE SCOPE-BOUND INSPECTOR — the consumer's output, and the subject of both human entries:
       #
       #   nix eval --json .#inspect --apply 'i: i.query "SELECT src, dst FROM edge WHERE label = '\''rings'\''"'
-      #   nix eval --raw  .#inspect --apply 'i: i.render.mermaid i.facts'
+      #   nix eval --raw  .#inspect --apply 'i: i.render.mermaid { } i.facts'
       #   nix repl .#
       inspect = fleet.inspector;
 
@@ -85,7 +85,7 @@
 
         fleet-graph-mermaid = pkgs.writeText "fleet-graph.mmd" mermaidSource;
         fleet-graph-dot = pkgs.writeText "fleet-graph.dot" (
-          fleet.inspector.render.dot fleet.inspector.facts
+          fleet.inspector.render.dot { } fleet.inspector.facts
         );
         default = pkgs.writeText "fleet-graph.mmd" mermaidSource;
       };

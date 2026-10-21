@@ -38,7 +38,9 @@ the subject last). `graphSubject { kind ? "vertex"; } { nodes; perLabel; }` and 
 two steps, materialized) are the only record-taking doors: the options step is closed, and the graph
 record is open (an extra field is admitted) but refuses `kind` by name when it is given there instead
 of the options (`ci/tests/doors.nix`). The rest are positional: `compile ast ir`, `door ast ir`,
-`evalQuery ast tables`, `select genSelect selector ir`, `astToSelector aliases expr`, `materialize subject`, `mkInspector subject`, `parseSql text`, `tokenize text` and `render.<format> ir`.
+`evalQuery ast tables`, `select genSelect selector ir`, `astToSelector aliases expr`, `materialize subject`, `mkInspector subject`, `parseSql text`, `tokenize text` and `render.json ir`. `render.mermaid` and `render.dot` take a closed options set
+first, `render.<r> { direction?; shapeOf?; labelOf?; nest?; } ir` (`{ }` is the default picture), so
+the positional `render.<r> ir` is refused by name.
 
 ## The modules
 

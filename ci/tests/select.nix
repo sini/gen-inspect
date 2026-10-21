@@ -96,7 +96,7 @@ in
     test-the-result-is-an-ir-and-renders = {
       expr =
         let
-          out = i.render.mermaid ringersOnly;
+          out = i.render.mermaid { } ringersOnly;
         in
         builtins.length (builtins.filter builtins.isList (builtins.split "flowchart LR" out));
       expected = 1;

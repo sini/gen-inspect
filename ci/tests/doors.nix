@@ -5,8 +5,8 @@
 # `graphSubject { kind?; } { nodes; perLabel; }` and `fromGraph`, the same two steps with `materialize`
 # behind them, are the library's only record-taking doors (census by reading every exported module's
 # every argument position: `materialize` takes the subject record and refuses its own missing fields by
-# name; `select`, `parseSql`/`tokenize`, `compile`, `door`, `evalQuery`/`astToSelector`, the three
-# renderers and `mkInspector` are positional). The options step is closed; the graph record behind it
+# name; `select`, `parseSql`/`tokenize`, `compile`, `door`, `evalQuery`/`astToSelector`, `json` and
+# `mkInspector` are positional; `mermaid` and `dot` take a closed options step first). The options step is closed; the graph record behind it
 # is an accessor record (rule 3), open, and guarded against its options step (`optionsStep`), so
 # `kind` given on the record is refused by name rather than silently dropped (G10).
 #
@@ -37,6 +37,9 @@ let
     inherit (genInspect) graphSubject fromGraph;
   };
   perDoor = f: builtins.mapAttrs f doors;
+  renderers = {
+    inherit (genInspect.render) mermaid dot;
+  };
 
   # A field name neither step declares, generated per evaluation from the door names, never listed.
   stranger = "not-a-field-of-" + builtins.concatStringsSep "-" (builtins.attrNames doors);
@@ -178,6 +181,29 @@ in
         [ "node" ]
         [ "node" ]
       ];
+    };
+
+    # ── THE RENDERERS' OPTIONS STEP: closed, refused at `render.<r> opts`'s WHNF ──
+    test-a-renderer-refuses-an-unknown-option-at-the-options-application = {
+      expr = builtins.mapAttrs (
+        _: r:
+        refusesAtApplication (r {
+          ${stranger} = 1;
+        })
+      ) renderers;
+      expected = builtins.mapAttrs (_: _: true) renderers;
+    };
+    test-control-a-renderer-answers-the-empty-options = {
+      expr = builtins.mapAttrs (
+        _: r:
+        answers (
+          r { } {
+            nodes = [ ];
+            edges = [ ];
+          }
+        )
+      ) renderers;
+      expected = builtins.mapAttrs (_: _: true) renderers;
     };
   };
 }

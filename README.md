@@ -28,7 +28,7 @@ i.facts                    # the IR
 i.query "SELECT …"         # the text surface
 i.select selector          # the programmatic surface; the result is an IR
 i.why "rings:hemony:bourdon"  # one atom's derivation: an edge's origin, or a reaches row's witnesses
-i.render.mermaid i.facts   # the picture's source
+i.render.mermaid { } i.facts   # the picture's source
 ```
 
 ## Why it exists
@@ -179,7 +179,7 @@ $ nix eval --json .#inspect --apply 'i: i.query "SELECT src, dst FROM edge WHERE
 ```
 
 ```console
-$ nix eval --raw .#inspect --apply 'i: i.render.mermaid i.facts'
+$ nix eval --raw .#inspect --apply 'i: i.render.mermaid { } i.facts'
 flowchart LR
   n0["campanile<br/>belfry"]
   n1["lantern<br/>belfry"]
@@ -212,6 +212,20 @@ flowchart LR
 ```
 
 The **two dashed edges are the rule's**; the twelve solid ones are declared. `n7 -.->|"rings"| n11` (hemony to bourdon) is the edge no `relations` entry states. A node's handle is its position in the IR's node list, so it is unique whatever bytes the id holds; the id itself is the label, escaped.
+
+`render.mermaid` and `render.dot` take one closed options set first, and `{ }` is the picture above:
+
+- `direction` (`"LR"`): one of `BT LR RL TB TD`.
+- `shapeOf` (`_: null`): kind → `null` (the renderer's own default) or one of `circle`, `cylinder`,
+  `hexagon`, `rect`, `rhombus`, `round`.
+- `labelOf` (`n: n.id`): the IR node record → the text drawn in place of the id. The id stays the
+  node's identity.
+- `nest` (`false`): when `true`, the IR's `parent` edges draw as nesting (mermaid subgraphs, dot
+  clusters), and every edge is still drawn. Two `parent` targets on one vertex, or a `parent` cycle,
+  is refused by name.
+
+An unknown option is refused by name, and so is the positional `render.mermaid i.facts`, whose first
+field it reads as an option. `render.json ir` takes no options.
 
 ```console
 $ nix repl .#
