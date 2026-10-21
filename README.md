@@ -181,37 +181,37 @@ $ nix eval --json .#inspect --apply 'i: i.query "SELECT src, dst FROM edge WHERE
 ```console
 $ nix eval --raw .#inspect --apply 'i: i.render.mermaid i.facts'
 flowchart LR
-  campanile["campanile<br/>belfry"]
-  lantern["lantern<br/>belfry"]
-  compline["compline<br/>chime"]
-  evensong["evensong<br/>chime"]
-  matins["matins<br/>chime"]
-  chiming["chiming<br/>peal"]
-  full_circle["full-circle<br/>peal"]
-  hemony["hemony<br/>ringer"]
-  mears["mears<br/>ringer"]
-  rudhall["rudhall<br/>ringer"]
-  angelus["angelus<br/>tocsin"]
-  bourdon["bourdon<br/>tocsin"]
-  sanctus["sanctus<br/>tocsin"]
-  tenor["tenor<br/>tocsin"]
-  full_circle -->|absorbs| chiming
-  bourdon -->|admits| full_circle
-  tenor -->|admits| chiming
-  hemony -->|enrolled| chiming
-  rudhall -->|enrolled| chiming
-  angelus -->|housed| lantern
-  bourdon -->|housed| campanile
-  sanctus -->|housed| lantern
-  tenor -->|housed| campanile
-  compline -->|hung| sanctus
-  evensong -->|hung| bourdon
-  matins -->|hung| tenor
-  hemony -.->|enrolled| full_circle
-  hemony -.->|rings| bourdon
+  n0["campanile<br/>belfry"]
+  n1["lantern<br/>belfry"]
+  n2["compline<br/>chime"]
+  n3["evensong<br/>chime"]
+  n4["matins<br/>chime"]
+  n5["chiming<br/>peal"]
+  n6["full-circle<br/>peal"]
+  n7["hemony<br/>ringer"]
+  n8["mears<br/>ringer"]
+  n9["rudhall<br/>ringer"]
+  n10["angelus<br/>tocsin"]
+  n11["bourdon<br/>tocsin"]
+  n12["sanctus<br/>tocsin"]
+  n13["tenor<br/>tocsin"]
+  n6 -->|"absorbs"| n5
+  n11 -->|"admits"| n6
+  n13 -->|"admits"| n5
+  n7 -->|"enrolled"| n5
+  n9 -->|"enrolled"| n5
+  n10 -->|"housed"| n1
+  n11 -->|"housed"| n0
+  n12 -->|"housed"| n1
+  n13 -->|"housed"| n0
+  n2 -->|"hung"| n12
+  n3 -->|"hung"| n11
+  n4 -->|"hung"| n13
+  n7 -.->|"enrolled"| n6
+  n7 -.->|"rings"| n11
 ```
 
-The **two dashed edges are the rule's**; the twelve solid ones are declared. `hemony -.->|rings| bourdon` is the edge no `relations` entry states.
+The **two dashed edges are the rule's**; the twelve solid ones are declared. `n7 -.->|"rings"| n11` (hemony to bourdon) is the edge no `relations` entry states. A node's handle is its position in the IR's node list, so it is unique whatever bytes the id holds; the id itself is the label, escaped.
 
 ```console
 $ nix repl .#
