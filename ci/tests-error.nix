@@ -507,7 +507,11 @@ in
           ];
         };
       });
-      expectedError.msg = mintRefusal "minted edge 'left:seam:ghost:a' is from 'seam:ghost', which is no minted node";
+      expectedError.msg = mintRefusal "minted edge '${builtins.toJSON [
+        "left"
+        "seam:ghost"
+        "a"
+      ]}' is from 'seam:ghost', which is no minted node";
     };
 
     # ── DOOR 17: A MINT CARRIED BY A SUBJECT THAT PROMOTES NOTHING ──
@@ -560,6 +564,47 @@ in
     test-two-output-columns-of-one-name-are-refused-by-name = {
       expr = q "SELECT t.name, b.name FROM tocsin t JOIN belfry b ON t.belfry = b.name";
       expectedError.msg = exactly "gen-inspect: duplicate output column 'name'; a projection keys by column name, so the second would replace the first";
+    };
+
+    test-a-star-inside-a-column-list-is-refused-by-name = {
+      expr = q "SELECT t.*, b.name FROM tocsin t JOIN belfry b ON t.belfry = b.name";
+      expectedError.msg = exactly "gen-inspect: 't.*' inside a column list is not a column; select it alone or name the columns";
+    };
+
+    # The text parser refuses `SELECT *, name` itself; the published `evalQuery` takes an AST, so the
+    # executor's own refusal is driven with the star unqualified.
+    test-an-unqualified-star-inside-a-column-list-is-refused-by-name = {
+      expr =
+        let
+          ast = genInspect.parseSql "SELECT t.*, t.weight FROM tocsin t";
+        in
+        genInspect.evalQuery (
+          ast // { select = map (c: c // { table = if c.column == "*" then null else c.table; }) ast.select; }
+        ) admitted.inspector.facts.tables;
+      expectedError.msg = exactly "gen-inspect: '*' inside a column list is not a column; select it alone or name the columns";
+    };
+
+    # `weight` is tocsin's alone, but tocsin joins after this ON.
+    test-an-on-column-no-item-in-scope-carries-is-refused-by-name = {
+      expr = q "SELECT b.name FROM belfry b JOIN chime c ON weight = c.name JOIN tocsin t ON t.belfry = b.name";
+      expectedError.msg = exactly "gen-inspect: column 'weight' is not carried by an item in scope at its JOIN (b, c); qualify it or join its table first";
+    };
+
+    test-an-unqualified-order-by-column-two-items-carry-is-refused-by-name = {
+      expr = q "SELECT t.name FROM tocsin t JOIN belfry b ON t.belfry = b.name ORDER BY name";
+      expectedError.msg = exactly "gen-inspect: ambiguous column 'name'; carried by t, b; qualify it";
+    };
+
+    # The reaches-edge pair of program.nix's C-1: `src` is carried by both items.
+    test-an-unqualified-src-over-reaches-and-edge-is-refused-by-name = {
+      expr = q "SELECT r.src, r.dst FROM reaches r JOIN edge e ON r.dst = e.dst WHERE src = 'bourdon' AND via = '*'";
+      expectedError.msg = exactly "gen-inspect: ambiguous column 'src'; carried by r, e; qualify it";
+    };
+
+    # A malformed `[`-led atom is refused by name; `fromJSON` on it would abort uncatchably.
+    test-why-refuses-a-malformed-list-atom-by-name = {
+      expr = admitted.inspector.why "[x";
+      expectedError.msg = exactly "gen-inspect: '[x' is neither an IR edge key nor a reaches atom";
     };
 
     # ── DOOR 7: mkInspector refuses a non-scope, NAMING THE MISSING FIELDS ──

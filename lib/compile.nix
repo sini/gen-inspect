@@ -23,9 +23,9 @@
 # and transitively; `via = '*'` is any label — the Kleene star of a path expression. Each
 # constrained `(via, src)` is a gen-program declaration set over the IR's edges `E_via`:
 #
-#   one fact per edge     `<label>:<src>:<dst>`               (the IR key itself)
-#   one fact per source   `reaches:<via>:<s>:<s>`             (the base case)
-#   one rule per edge e   `reaches:<via>:<s>:<e.dst>` ← `reaches:<via>:<s>:<e.src>`, `<key e>`
+#   one fact per edge     `[label,src,dst]`                   (the IR key itself, a JSON list)
+#   one fact per source   `["reaches",via,s,s]`               (the base case)
+#   one rule per edge e   `["reaches",via,s,e.dst]` ← `["reaches",via,s,e.src]`, `<key e>`
 #
 # and it is solved by gen-scope's engine through gen-program — the SOLE evaluator (ADR-0006); nothing
 # here computes a fixpoint. The program has no negative literal, so it is Horn, and Van Gelder, Ross
@@ -42,7 +42,7 @@
 # On `edge`, `why` is the IR's own `origin` record. On `reaches` it is `{ kind = "query";
 # derivations; }`: every rule of the query program whose body is true in the model (VGRS91 Def 3.3),
 # built by the same construction `./materialize.nix` uses for an edge's origin. It is ONE STEP and is
-# never unfolded: on a cycle one witness of `reaches:v:a:a` leads back to itself through the cycle,
+# never unfolded: on a cycle one witness of `["reaches",v,a,a]` leads back to itself through the cycle,
 # and choosing a well-founded proof tree needs stage information the engine does not publish.
 {
   lib,
@@ -198,7 +198,7 @@ let
         interpretation = [ ];
         complete = true;
       };
-      # A query program's fact IS a witness: the base case `reaches:v:s:s` fires vacuously.
+      # A query program's fact IS a witness: the base case `["reaches",v,s,s]` fires vacuously.
       derivationsOf = witnesses {
         inherit (prog) rules;
         inherit (model) verdict;
@@ -236,9 +236,9 @@ let
   #   self-join `reaches r1 JOIN reaches r2` is two relations; pruning both by `r1.src` loses r2's
   #   rows at exit 0. Each occurrence is grounded by its OWN constraints and handed to the executor
   #   under its own table key.
-  # ★ AN UNQUALIFIED COLUMN IS PUSHED ONLY WHEN NO OTHER ITEM CARRIES IT. The executor merges a joined
-  #   row as `left // right`, so an unqualified `src` binds to the right-hand item's `src`; in
-  #   `reaches r JOIN edge e … WHERE src = 'x'` it is `e.src`, and pushing it into `r` loses rows.
+  # ★ AN UNQUALIFIED COLUMN IS PUSHED ONLY WHEN NO OTHER ITEM CARRIES IT. In `reaches r JOIN edge e …
+  #   WHERE src = 'x'` the unqualified `src` is carried by both items, so the executor refuses the
+  #   query; the guard stays as defence in depth, since pushing it into `r` alone would lose rows.
   conjuncts =
     expr:
     if expr == null || !(builtins.isAttrs expr) || !(expr ? op) then
@@ -275,7 +275,13 @@ let
           ) (equalities ast);
         in
         if hits == [ ] then full else lib.unique (map (c: c.right) hits);
-      occurrenceKey = item: "reaches:${qualifierOf item}";
+      # A JSON list, the house key encoding: a kind is a string, so it cannot collide with a list.
+      occurrenceKey =
+        item:
+        builtins.toJSON [
+          "reaches"
+          (qualifierOf item)
+        ];
       rename =
         item:
         if item.kind == "reaches" then
@@ -323,8 +329,15 @@ let
     ir: a:
     let
       # Only a JSON list is an atom: a colon-joined string is not parsed, because it cannot say where
-      # one id ends and the next begins. `fromJSON` errors are not catchable, so the shape is gated first.
-      parsed = if builtins.substring 0 1 a == "[" then builtins.fromJSON a else null;
+      # one id ends and the next begins. `fromJSON` errors are not catchable, so the whole string is
+      # matched against the canonical `toJSON` of a four-string list first. The regex ends in a bare
+      # `]` (`\]` is not a valid escape in every dialect), and `ctl` is the raw control range
+      # U+0001-U+001F, which `toJSON` always escapes and `fromJSON` refuses unescaped; the escapes
+      # admitted are the ones `toJSON` emits, so no surrogate or NUL escape reaches `fromJSON`.
+      ctl = builtins.fromJSON ''"\u0001-\u001f"'';
+      jstr = ''"([^"\\${ctl}]|\\(["\\nrt]|u00([0-9a-fA-F][1-9a-fA-F]|[1-9a-fA-F]0)))*"'';
+      canonical = "\\[${jstr}(,${jstr}){3}]";
+      parsed = if builtins.match canonical a != null then builtins.fromJSON a else null;
       isAtom =
         builtins.isList parsed
         && lib.length parsed == 4

@@ -82,7 +82,8 @@ the positional `render.<r> ir` is refused by name.
 - ★★ **`reaches` pushdown is PER OCCURRENCE and prunes, never decides.** The executor binds each
   FROM/JOIN item separately and merges a joined row as `left // right`, so an unqualified column
   would bind to the right-hand item; `executor.nix` refuses an unqualified column two items carry,
-  `SELECT *` over shared columns and a duplicate output name by name. Grounding one table for every
+  an unqualified `ON` column no item in scope carries, `SELECT *` over shared columns, a `*` inside a
+  column list and a duplicate output name by name. Grounding one table for every
   occurrence answers WRONG at exit 0. `ci/tests/program.nix` holds the parity cells (pruned =
   unpruned) and the refusal of the ambiguous form.
 - ★★ **The `reaches` relata domain is node ids ∪ every edge endpoint**, and it is both gen-program's

@@ -76,6 +76,24 @@ in
       expected = "query";
     };
 
+    # `fromJSON` aborts uncatchably on these, so each is refused before it is parsed.
+    test-why-refuses-a-malformed-list-atom-catchably = {
+      expr = {
+        notJson = refuses (i.why "[x");
+        unclosed = refuses (i.why ''["reaches","*","c","d"'');
+        shortEscape = refuses (i.why ''["reaches","*","c","d\u"]'');
+        rawNewline = refuses (i.why "[\"reaches\",\"*\",\"c\",\"d\n\"]");
+        control = answers (i.why (reachesAtom "*" "c" "d"));
+      };
+      expected = {
+        notJson = true;
+        unclosed = true;
+        shortEscape = true;
+        rawNewline = true;
+        control = true;
+      };
+    };
+
     test-why-refuses-a-colon-string-atom = {
       expr = {
         colon = refuses (i.why "reaches:*:c:d");

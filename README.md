@@ -51,7 +51,7 @@ than an ad-hoc filter set.
 ```
 nodes   : [ { id; kind; attrs; } ]
 edges   : [ { src; dst; label; origin; } ]
-origins : { "<label>:<src>:<dst>" -> origin }   every edge gen-program's `reached` yields is a key
+origins : { "[label,src,dst]" -> origin }   every edge gen-program's `reached` yields is a key
 origin  : { kind = "declaration"; site; }
         | { kind = "rule"; derivations = [ { rule = { head; pos; neg; };
                                               fired = [ { atom; verdict; sign; } ]; } ]; }
@@ -120,7 +120,7 @@ nothing here computes with them algebraically.
 The selector layer is the **guard sublanguage**, not "the non-recursive fragment". Measured:
 gen-select's constructors yield exactly nine tags, and `sel ? join`, `sel ? comprehension` and
 `sel ? fix` are all false. So a `JOIN` has no selector to compile to and routes to the fold — **a
-`JOIN` is not refused**. What a join cannot answer is refused by name: an unqualified column more than one joined table carries, `SELECT *` over a join whose sides share a column, and two output columns of one name; the qualified forms (`t.name`, `b.kind`) serve.
+`JOIN` is not refused**. Five shapes that would answer wrong are refused by name instead: an unqualified column (in the select list, `WHERE`, `ON` or `ORDER BY`) that more than one item carries, an unqualified `ON` column no item in scope at that `JOIN` carries, `SELECT *` over a join whose sides share a column, a `*` or `t.*` inside a column list, and two output columns of one name. The qualified forms (`t.name`, `b.kind`) serve, a lone `t.*` is t's columns, and `ORDER BY` honours its qualifier whether or not the column is projected.
 
 ## Reachability and `why`
 

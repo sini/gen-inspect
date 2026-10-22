@@ -6,7 +6,7 @@
 #
 #   nodes   : [ { id; kind; attrs; } ]
 #   edges   : [ { src; dst; label; origin; } ]
-#   origins : { "<label>:<src>:<dst>" -> origin }   — EVERY edge gen-program's `reached` yields is a key
+#   origins : { "[label,src,dst]" -> origin }   — EVERY edge gen-program's `reached` yields is a key
 #   origin  : { kind = "declaration"; site; }
 #           | { kind = "rule"; derivations = [ { rule  = { head; pos; neg; };
 #                                                  fired = [ { atom; verdict; sign; } ]; } ]; }
@@ -275,7 +275,14 @@ let
           )
         ) mintedRecs
         ++ faultsOf (
-          e: "minted edge '${e.label}:${e.from}:${e.to}' is from '${e.from}', which is no minted node"
+          e:
+          "minted edge '${
+            keyOf {
+              inherit (e) label;
+              src = e.from;
+              dst = e.to;
+            }
+          }' is from '${e.from}', which is no minted node"
         ) (e: !(builtins.elem e.from mintedIds)) minted.edges;
       # The promoted nodes join the register by their kind: ONE node list (ADR-0012). The door has
       # refused a head already registered, so `//` here only ever adds.

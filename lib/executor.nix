@@ -10,7 +10,7 @@
 # selector to compile to and this fold is where they go. `WHERE` still compiles to gen-select, in
 # `astToSelector` below, which is the second route and is unchanged from the origin.
 #
-# THREE CHANGES AGAINST THE ORIGIN, EACH NAMED.
+# FOUR CHANGES AGAINST THE ORIGIN, EACH NAMED.
 #
 # (1) ★ THE KIND-ALIAS TABLE IS STRIPPED TO THE IDENTITY. The origin carried 23 entries mapping
 #     plural SQL table names to singular fleet kinds, and those entries sit AT KIND POSITION:
@@ -28,6 +28,16 @@
 #     tocsin.belfry = belfry.name` resolved both qualifiers to the unqualified fallback and answered
 #     `[ ]` at exit 0. SQL's range-variable rule: a FROM item's correlation name is its alias if one is
 #     given, else the table name. An unknown or duplicated qualifier is refused in `./door.nix`.
+#
+# (4) ★ THE AMBIGUITY DOOR (`ambiguityRefusals`) AND THE PROJECTION/ORDER/ON SCOPING THAT GO WITH IT.
+#     The origin merged a joined row as `leftRow // joinRow`, so a column both sides carry read the
+#     right side's value, and keyed the projection and the sort by the bare column name, so two
+#     columns of one name collapsed to one, a `*` inside a column list became a column named `*`, an
+#     ORDER BY ignored its qualifier and sorted an unprojected column as "", and an unqualified ON
+#     column read only the left row. Each answered WRONG at exit 0; each is now refused by name or
+#     served as SQL's range-variable rule reads it: a lone `t.*` is t's columns, an ORDER BY column is
+#     read from the row the query ranges over rather than from the projection, and an unqualified ON
+#     column is read from the row the join builds, refused when no item in scope at that JOIN carries it.
 #
 # `lib` here is gen-prelude extended by `./extras.nix`, not nixpkgs `lib`; see that file's header.
 # The three nixpkgs names the origin used that the prelude does not publish —
@@ -258,8 +268,10 @@ let
               fullAliases = rowAliases // {
                 ${joinAlias} = joinRow;
               };
-              lv = resolveValue fullAliases leftRow join.on.left;
-              rv = resolveValue fullAliases leftRow join.on.right;
+              # An unqualified ON column is read from the merged row, so one carried only by the
+              # joined item resolves; one both carry is refused in `ambiguityRefusals`.
+              lv = resolveValue fullAliases (leftRow // joinRow) join.on.left;
+              rv = resolveValue fullAliases (leftRow // joinRow) join.on.right;
             in
             lv == rv
           ) joinRows;
@@ -291,7 +303,10 @@ let
   projectRow =
     aliases: row: selectCols:
     if builtins.length selectCols == 1 && (builtins.head selectCols).column == "*" then
-      row
+      let
+        star = builtins.head selectCols;
+      in
+      if star.table != null && aliases ? ${star.table} then aliases.${star.table} else row
     else
       lib.listToAttrs (
         map (
@@ -330,7 +345,12 @@ let
       columnsOfItem =
         item:
         lib.unique (builtins.concatMap builtins.attrNames (builtins.attrValues (getRows fleet item.kind)));
-      carriers = col: map qualifierOf (builtins.filter (it: builtins.elem col (columnsOfItem it)) items);
+      cols = map (item: {
+        q = qualifierOf item;
+        columns = columnsOfItem item;
+      }) items;
+      carriersIn = scope: col: map (c: c.q) (builtins.filter (c: builtins.elem col c.columns) scope);
+      carriers = carriersIn cols;
       ambiguous = col: builtins.length (carriers col) > 1;
       unqualified = builtins.filter (r: r.table == null && r.column != "*") (
         ast.select
@@ -339,9 +359,28 @@ let
           j.on.right
         ]) ast.joins
         ++ whereRefs ast.where
+        ++ lib.optional (ast.orderBy != null) ast.orderBy
       );
       named = map (c: c.column) (builtins.filter (c: c.column != "*") ast.select);
-      shared = builtins.filter ambiguous (lib.unique (builtins.concatMap columnsOfItem items));
+      shared = builtins.filter ambiguous (lib.unique (builtins.concatMap (c: c.columns) cols));
+      # An unqualified ON column must be carried by an item in scope at its JOIN: the items to its
+      # left and the joined one.
+      onOutOfScope = builtins.concatMap (
+        n:
+        let
+          j = builtins.elemAt ast.joins n;
+          scope = lib.take (n + 2) cols;
+        in
+        map (r: {
+          inherit (r) column;
+          scope = map (c: c.q) scope;
+        }) (builtins.filter (r: r.table == null && carriersIn scope r.column == [ ]) [
+          j.on.left
+          j.on.right
+        ])
+      ) (builtins.genList (n: n) (builtins.length ast.joins));
+      stars = builtins.filter (c: c.column == "*") ast.select;
+      starSpelling = c: if c.table == null then "*" else "${c.table}.*";
     in
     lib.optional (ast.joins != [ ]) (
       builtins.deepSeq (map (
@@ -352,7 +391,16 @@ let
           null
       ) unqualified) null
     )
-    ++ lib.optional (ast.joins != [ ] && map (c: c.column) ast.select == [ "*" ] && shared != [ ]) (
+    ++ map (
+      o:
+      throw "gen-inspect: column '${o.column}' is not carried by an item in scope at its JOIN (${builtins.concatStringsSep ", " o.scope}); qualify it or join its table first"
+    ) onOutOfScope
+    ++ lib.optional (builtins.length ast.select > 1 && stars != [ ]) (
+      throw "gen-inspect: '${starSpelling (lib.head stars)}' inside a column list is not a column; select it alone or name the columns"
+    )
+    ++ lib.optional
+      (ast.joins != [ ] && builtins.length ast.select == 1 && stars != [ ] && (lib.head stars).table == null && shared != [ ])
+      (
       throw "gen-inspect: SELECT * over a join is ambiguous; ${builtins.concatStringsSep ", " shared} ${
         if builtins.length shared == 1 then "is" else "are"
       } carried by more than one of ${builtins.concatStringsSep ", " (map qualifierOf items)}; name the columns"
@@ -414,18 +462,24 @@ let
         genSelect.matches selector "row" ctx
       ) joinedRows;
 
-      # Project columns
-      projectedRows = map (item: projectRow item.aliases item.row ast.select) filteredRows;
-
-      # ORDER BY
-      orderedRows =
+      # ORDER BY sorts the rows the query ranges over, by the column it names (qualifier honoured,
+      # projected or not); a null column sorts as "".
+      orderedItems =
         if ast.orderBy == null then
-          projectedRows
+          filteredRows
         else
           let
-            colName = ast.orderBy.column;
+            key =
+              item:
+              let
+                v = resolveValue item.aliases item.row ast.orderBy;
+              in
+              if v == null then "" else v;
           in
-          builtins.sort (a: b: compareValues (a.${colName} or "") (b.${colName} or "")) projectedRows;
+          builtins.sort (a: b: compareValues (key a) (key b)) filteredRows;
+
+      # Project columns
+      orderedRows = map (item: projectRow item.aliases item.row ast.select) orderedItems;
 
       # LIMIT
       limitedRows = if ast.limit == null then orderedRows else lib.take ast.limit orderedRows;

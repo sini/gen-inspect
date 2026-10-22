@@ -116,6 +116,78 @@ in
       ];
     };
 
+    # A lone `t.*` over a join is t's columns, not a refusal about `SELECT *`.
+    test-a-lone-qualified-star-over-a-join-is-the-qualified-items-columns = {
+      expr = q "SELECT t.* FROM tocsin t JOIN belfry b ON t.belfry = b.name WHERE t.weight = 'heavy'";
+      expected = [
+        {
+          name = "angelus";
+          kind = "tocsin";
+          belfry = "lantern";
+          weight = "heavy";
+        }
+        {
+          name = "bourdon";
+          kind = "tocsin";
+          belfry = "campanile";
+          weight = "heavy";
+        }
+      ];
+    };
+
+    # An unqualified ON column carried only by the joined item reads that item, as its qualified
+    # spelling does (it answered `[ ]` at exit 0 while the qualified control answered 4).
+    test-an-unqualified-on-column-the-joined-item-alone-carries-reads-that-item = {
+      expr = {
+        unqualified = q "SELECT b.name FROM belfry b JOIN tocsin t ON belfry = b.name";
+        qualified = q "SELECT b.name FROM belfry b JOIN tocsin t ON t.belfry = b.name";
+      };
+      expected = {
+        unqualified = [
+          { name = "campanile"; }
+          { name = "campanile"; }
+          { name = "lantern"; }
+          { name = "lantern"; }
+        ];
+        qualified = [
+          { name = "campanile"; }
+          { name = "campanile"; }
+          { name = "lantern"; }
+          { name = "lantern"; }
+        ];
+      };
+    };
+
+    # ORDER BY honours its qualifier and sorts an unprojected column by its value. Projected `t.name`
+    # alone sorted by `t.name` whichever column was named, and an unprojected one as "" (a no-op sort).
+    test-order-by-honours-its-qualifier-and-an-unprojected-column = {
+      expr = {
+        qualified = q "SELECT t.name FROM tocsin t JOIN belfry b ON t.belfry = b.name ORDER BY b.name";
+        unprojected = q "SELECT name FROM tocsin ORDER BY belfry";
+        projected = q "SELECT t.name FROM tocsin t JOIN belfry b ON t.belfry = b.name ORDER BY t.weight";
+      };
+      expected = {
+        qualified = [
+          { name = "bourdon"; }
+          { name = "tenor"; }
+          { name = "angelus"; }
+          { name = "sanctus"; }
+        ];
+        unprojected = [
+          { name = "bourdon"; }
+          { name = "tenor"; }
+          { name = "angelus"; }
+          { name = "sanctus"; }
+        ];
+        projected = [
+          { name = "angelus"; }
+          { name = "bourdon"; }
+          { name = "sanctus"; }
+          { name = "tenor"; }
+        ];
+      };
+    };
+
     test-control-order-by-and-limit-route-to-the-executor = {
       expr = q "SELECT name FROM tocsin ORDER BY name LIMIT 2";
       expected = [

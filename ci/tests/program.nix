@@ -451,6 +451,23 @@ in
       };
     };
 
+    # A grounded occurrence is keyed by a JSON list, so a kind that is literally named like the old
+    # `reaches:<alias>` key keeps its own table.
+    test-c-1-a-kind-named-like-an-occurrence-key-keeps-its-own-table = {
+      expr =
+        let
+          userTable.x = {
+            name = "x";
+            kind = "reaches:r";
+          };
+          routed = genInspect.compile (genInspect.parseSql "SELECT r.dst FROM reaches r WHERE r.src = 'hemony' AND r.via = '*'") (
+            i.facts // { tables = i.facts.tables // { "reaches:r" = userTable; }; }
+          );
+        in
+        routed.tables."reaches:r" == userTable;
+      expected = true;
+    };
+
     # ── C7: THE gen-demo C25 SHAPE ──
     test-c7-recursion-adds-the-second-hop-over-c25 = {
       expr = {
