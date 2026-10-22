@@ -460,9 +460,17 @@ in
             name = "x";
             kind = "reaches:r";
           };
-          routed = genInspect.compile (genInspect.parseSql "SELECT r.dst FROM reaches r WHERE r.src = 'hemony' AND r.via = '*'") (
-            i.facts // { tables = i.facts.tables // { "reaches:r" = userTable; }; }
-          );
+          routed =
+            genInspect.compile
+              (genInspect.parseSql "SELECT r.dst FROM reaches r WHERE r.src = 'hemony' AND r.via = '*'")
+              (
+                i.facts
+                // {
+                  tables = i.facts.tables // {
+                    "reaches:r" = userTable;
+                  };
+                }
+              );
         in
         routed.tables."reaches:r" == userTable;
       expected = true;

@@ -507,11 +507,13 @@ in
           ];
         };
       });
-      expectedError.msg = mintRefusal "minted edge '${builtins.toJSON [
-        "left"
-        "seam:ghost"
-        "a"
-      ]}' is from 'seam:ghost', which is no minted node";
+      expectedError.msg = mintRefusal "minted edge '${
+        builtins.toJSON [
+          "left"
+          "seam:ghost"
+          "a"
+        ]
+      }' is from 'seam:ghost', which is no minted node";
     };
 
     # ── DOOR 17: A MINT CARRIED BY A SUBJECT THAT PROMOTES NOTHING ──

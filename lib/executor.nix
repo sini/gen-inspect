@@ -371,13 +371,17 @@ let
           j = builtins.elemAt ast.joins n;
           scope = lib.take (n + 2) cols;
         in
-        map (r: {
-          inherit (r) column;
-          scope = map (c: c.q) scope;
-        }) (builtins.filter (r: r.table == null && carriersIn scope r.column == [ ]) [
-          j.on.left
-          j.on.right
-        ])
+        map
+          (r: {
+            inherit (r) column;
+            scope = map (c: c.q) scope;
+          })
+          (
+            builtins.filter (r: r.table == null && carriersIn scope r.column == [ ]) [
+              j.on.left
+              j.on.right
+            ]
+          )
       ) (builtins.genList (n: n) (builtins.length ast.joins));
       stars = builtins.filter (c: c.column == "*") ast.select;
       starSpelling = c: if c.table == null then "*" else "${c.table}.*";
@@ -398,13 +402,20 @@ let
     ++ lib.optional (builtins.length ast.select > 1 && stars != [ ]) (
       throw "gen-inspect: '${starSpelling (lib.head stars)}' inside a column list is not a column; select it alone or name the columns"
     )
-    ++ lib.optional
-      (ast.joins != [ ] && builtins.length ast.select == 1 && stars != [ ] && (lib.head stars).table == null && shared != [ ])
-      (
-      throw "gen-inspect: SELECT * over a join is ambiguous; ${builtins.concatStringsSep ", " shared} ${
-        if builtins.length shared == 1 then "is" else "are"
-      } carried by more than one of ${builtins.concatStringsSep ", " (map qualifierOf items)}; name the columns"
-    )
+    ++
+      lib.optional
+        (
+          ast.joins != [ ]
+          && builtins.length ast.select == 1
+          && stars != [ ]
+          && (lib.head stars).table == null
+          && shared != [ ]
+        )
+        (
+          throw "gen-inspect: SELECT * over a join is ambiguous; ${builtins.concatStringsSep ", " shared} ${
+            if builtins.length shared == 1 then "is" else "are"
+          } carried by more than one of ${builtins.concatStringsSep ", " (map qualifierOf items)}; name the columns"
+        )
     ++ map (
       n:
       throw "gen-inspect: duplicate output column '${n}'; a projection keys by column name, so the second would replace the first"
