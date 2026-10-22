@@ -81,9 +81,10 @@ the positional `render.<r> ir` is refused by name.
   caller supplies the rule filter (`bodied` for rule origins, none for the query program).
 - ★★ **`reaches` pushdown is PER OCCURRENCE and prunes, never decides.** The executor binds each
   FROM/JOIN item separately and merges a joined row as `left // right`, so an unqualified column
-  binds to the right-hand item. Grounding one table for every occurrence, or pushing an unqualified
-  `src` another item also carries, answers WRONG at exit 0. `ci/tests/program.nix` holds the two
-  parity cells (pruned = unpruned).
+  would bind to the right-hand item; `executor.nix` refuses an unqualified column two items carry,
+  `SELECT *` over shared columns and a duplicate output name by name. Grounding one table for every
+  occurrence answers WRONG at exit 0. `ci/tests/program.nix` holds the parity cells (pruned =
+  unpruned) and the refusal of the ambiguous form.
 - ★★ **The `reaches` relata domain is node ids ∪ every edge endpoint**, and it is both gen-program's
   `frozen` set and the rows' `dst` domain. Node ids alone refuse a closure crossing a dangling
   endpoint the IR admits, and a widened `frozen` alone drops that endpoint from the rows.

@@ -98,6 +98,24 @@ in
       ];
     };
 
+    # The qualified and the unambiguous forms still serve: `weight` is carried by `tocsin` alone, and
+    # `b.kind` is a qualified column of a distinct output name.
+    test-control-qualified-and-unambiguous-columns-over-a-join-serve = {
+      expr = q "SELECT t.name, weight, b.kind FROM tocsin t JOIN belfry b ON t.belfry = b.name WHERE weight = 'heavy'";
+      expected = [
+        {
+          name = "angelus";
+          weight = "heavy";
+          kind = "belfry";
+        }
+        {
+          name = "bourdon";
+          weight = "heavy";
+          kind = "belfry";
+        }
+      ];
+    };
+
     test-control-order-by-and-limit-route-to-the-executor = {
       expr = q "SELECT name FROM tocsin ORDER BY name LIMIT 2";
       expected = [

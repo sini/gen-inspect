@@ -307,6 +307,61 @@ let
         ) selectCols
       );
 
+  # ── THE AMBIGUITY DOOR ──
+  # A joined row is `leftRow // joinRow`, so a column both sides carry reads the right side's value,
+  # and the projection keys its output by the bare column name, so two columns of one name collapse
+  # to one. Each answers WRONG at exit 0, so each is refused by name instead.
+  whereRefs =
+    expr:
+    if expr == null || !(builtins.isAttrs expr) || !(expr ? op) then
+      [ ]
+    else if expr.op == "AND" || expr.op == "OR" then
+      whereRefs expr.left ++ whereRefs expr.right
+    else
+      builtins.filter (r: builtins.isAttrs r && r ? column) [
+        (expr.left or null)
+        (expr.right or null)
+      ];
+
+  ambiguityRefusals =
+    fleet: ast:
+    let
+      items = [ ast.from ] ++ ast.joins;
+      columnsOfItem =
+        item:
+        lib.unique (builtins.concatMap builtins.attrNames (builtins.attrValues (getRows fleet item.kind)));
+      carriers = col: map qualifierOf (builtins.filter (it: builtins.elem col (columnsOfItem it)) items);
+      ambiguous = col: builtins.length (carriers col) > 1;
+      unqualified = builtins.filter (r: r.table == null && r.column != "*") (
+        ast.select
+        ++ builtins.concatMap (j: [
+          j.on.left
+          j.on.right
+        ]) ast.joins
+        ++ whereRefs ast.where
+      );
+      named = map (c: c.column) (builtins.filter (c: c.column != "*") ast.select);
+      shared = builtins.filter ambiguous (lib.unique (builtins.concatMap columnsOfItem items));
+    in
+    lib.optional (ast.joins != [ ]) (
+      builtins.deepSeq (map (
+        r:
+        if ambiguous r.column then
+          throw "gen-inspect: ambiguous column '${r.column}'; carried by ${builtins.concatStringsSep ", " (carriers r.column)}; qualify it"
+        else
+          null
+      ) unqualified) null
+    )
+    ++ lib.optional (ast.joins != [ ] && map (c: c.column) ast.select == [ "*" ] && shared != [ ]) (
+      throw "gen-inspect: SELECT * over a join is ambiguous; ${builtins.concatStringsSep ", " shared} ${
+        if builtins.length shared == 1 then "is" else "are"
+      } carried by more than one of ${builtins.concatStringsSep ", " (map qualifierOf items)}; name the columns"
+    )
+    ++ map (
+      n:
+      throw "gen-inspect: duplicate output column '${n}'; a projection keys by column name, so the second would replace the first"
+    ) (lib.unique (builtins.filter (n: builtins.length (builtins.filter (m: m == n) named) > 1) named));
+
   # Compare values for ORDER BY
   compareValues =
     a: b:
@@ -375,7 +430,7 @@ let
       # LIMIT
       limitedRows = if ast.limit == null then orderedRows else lib.take ast.limit orderedRows;
     in
-    limitedRows;
+    builtins.deepSeq (ambiguityRefusals fleet ast) limitedRows;
 
 in
 {

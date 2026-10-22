@@ -120,7 +120,7 @@ nothing here computes with them algebraically.
 The selector layer is the **guard sublanguage**, not "the non-recursive fragment". Measured:
 gen-select's constructors yield exactly nine tags, and `sel ? join`, `sel ? comprehension` and
 `sel ? fix` are all false. So a `JOIN` has no selector to compile to and routes to the fold — **a
-`JOIN` is not refused**.
+`JOIN` is not refused**. What a join cannot answer is refused by name: an unqualified column more than one joined table carries, `SELECT *` over a join whose sides share a column, and two output columns of one name; the qualified forms (`t.name`, `b.kind`) serve.
 
 ## Reachability and `why`
 

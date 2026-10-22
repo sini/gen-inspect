@@ -438,16 +438,16 @@ in
       };
     };
 
-    test-c-1-an-unqualified-column-another-item-carries-is-not-pushed = {
+    # The query is refused (`src` is carried by both items), pruned or not: pruning never decides, and
+    # an ambiguous column never reaches an answer.
+    test-c-1-an-unqualified-column-another-item-carries-is-refused-pruned-or-not = {
       expr = {
-        pruned = i.query unqualified;
-        unpruned = unpruned unqualified;
-        rows = builtins.length (i.query unqualified);
+        pruned = !(builtins.tryEval (builtins.deepSeq (i.query unqualified) null)).success;
+        unpruned = !(builtins.tryEval (builtins.deepSeq (unpruned unqualified) null)).success;
       };
       expected = {
-        pruned = unpruned unqualified;
-        unpruned = i.query unqualified;
-        rows = 10;
+        pruned = true;
+        unpruned = true;
       };
     };
 

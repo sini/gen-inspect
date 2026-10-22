@@ -543,6 +543,25 @@ in
       expectedError.msg = exactly "gen-inspect: duplicate qualifier 'tocsin'; give each FROM/JOIN item a distinct alias";
     };
 
+    # ── DOOR 18: ★ A JOIN THAT WOULD ANSWER WRONG AT EXIT 0 ──
+    # A joined row is `left // right`, so a column both sides carry read the right side's value
+    # (`name = 'angelus'` below matched nothing and answered `[ ]`), `SELECT *` returned the right
+    # side's value for every shared column, and a projection of two columns of one name kept one.
+    test-an-unqualified-column-two-joined-items-carry-is-refused-by-name = {
+      expr = q "SELECT t.name FROM tocsin t JOIN belfry b ON t.belfry = b.name WHERE name = 'angelus'";
+      expectedError.msg = exactly "gen-inspect: ambiguous column 'name'; carried by t, b; qualify it";
+    };
+
+    test-select-star-over-a-join-with-a-shared-column-is-refused-by-name = {
+      expr = q "SELECT * FROM tocsin t JOIN belfry b ON t.belfry = b.name";
+      expectedError.msg = exactly "gen-inspect: SELECT * over a join is ambiguous; kind, name are carried by more than one of t, b; name the columns";
+    };
+
+    test-two-output-columns-of-one-name-are-refused-by-name = {
+      expr = q "SELECT t.name, b.name FROM tocsin t JOIN belfry b ON t.belfry = b.name";
+      expectedError.msg = exactly "gen-inspect: duplicate output column 'name'; a projection keys by column name, so the second would replace the first";
+    };
+
     # ── DOOR 7: mkInspector refuses a non-scope, NAMING THE MISSING FIELDS ──
     # The gen-graph case goes through an explicit wrapper rather than a shape probe, so everything
     # that is neither reaches this refusal.
