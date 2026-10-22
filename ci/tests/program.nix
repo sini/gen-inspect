@@ -92,6 +92,23 @@ let
     saturatesToEngine = true;
   };
 
+  # The keys the library builds: an IR edge key and a `reaches` atom are JSON lists.
+  key =
+    label: src: dst:
+    builtins.toJSON [
+      label
+      src
+      dst
+    ];
+  atom =
+    via: s: d:
+    builtins.toJSON [
+      "reaches"
+      via
+      s
+      d
+    ];
+
   # ── FIXTURES ──
   cycle = genInspect.fromGraph { } {
     nodes = [
@@ -203,7 +220,11 @@ let
     let
       full = builtins.listToAttrs (
         map (r: {
-          name = "${r.via}:${r.src}:${r.dst}";
+          name = builtins.toJSON [
+            r.via
+            r.src
+            r.dst
+          ];
           value = r;
         }) (i.query "SELECT src, dst, via FROM reaches")
       );
@@ -313,21 +334,21 @@ in
         derivations = [
           {
             rule = {
-              head = "reaches:*:hemony:bourdon";
+              head = (atom "*" "hemony" "bourdon");
               pos = [
-                "reaches:*:hemony:hemony"
-                "rings:hemony:bourdon"
+                (atom "*" "hemony" "hemony")
+                (key "rings" "hemony" "bourdon")
               ];
               neg = [ ];
             };
             fired = [
               {
-                atom = "reaches:*:hemony:hemony";
+                atom = (atom "*" "hemony" "hemony");
                 verdict = "true";
                 sign = "pos";
               }
               {
-                atom = "rings:hemony:bourdon";
+                atom = (key "rings" "hemony" "bourdon");
                 verdict = "true";
                 sign = "pos";
               }
@@ -341,14 +362,14 @@ in
       expr = {
         chiming = builtins.length (whyOf "chiming").derivations;
         self = (whyOf "hemony").derivations;
-        viaEntry = i.why "reaches:*:hemony:chiming" == whyOf "chiming";
+        viaEntry = i.why (atom "*" "hemony" "chiming") == whyOf "chiming";
       };
       expected = {
         chiming = 2;
         self = [
           {
             rule = {
-              head = "reaches:*:hemony:hemony";
+              head = (atom "*" "hemony" "hemony");
               pos = [ ];
               neg = [ ];
             };
@@ -380,7 +401,7 @@ in
             builtins.concatMap (
               r:
               builtins.concatMap (
-                d: builtins.filter (a: builtins.match "[^:]*:[^:]*:[^:]*" a != null) (map (l: l.atom) d.fired)
+                d: builtins.filter (a: builtins.length (builtins.fromJSON a) == 3) (map (l: l.atom) d.fired)
               ) r.why.derivations
             ) whyRows
           );
@@ -388,14 +409,14 @@ in
         {
           n = builtins.length atoms;
           allKeyed = builtins.all (a: i.facts.origins ? ${a}) atoms;
-          rings = (i.why "rings:hemony:bourdon").kind;
+          rings = (i.why (key "rings" "hemony" "bourdon")).kind;
           column = map (r: r.why) (i.query "SELECT why FROM edge WHERE label = 'rings'");
         };
       expected = {
         n = 6;
         allKeyed = true;
         rings = "rule";
-        column = [ i.facts.origins."rings:hemony:bourdon" ];
+        column = [ i.facts.origins.${key "rings" "hemony" "bourdon"} ];
       };
     };
 
@@ -441,7 +462,7 @@ in
         failleFromOthers = builtins.filter (r: r.dst == "faille" && r.src != "faille") (
           c25.query "SELECT src, dst FROM reaches WHERE via = '*'"
         );
-        damaskWhy = map (d: d.rule.pos) (c25.why "reaches:tacks:pewter:damask").derivations;
+        damaskWhy = map (d: d.rule.pos) (c25.why (atom "tacks" "pewter" "damask")).derivations;
       };
       expected = {
         E = [
@@ -458,8 +479,8 @@ in
         failleFromOthers = [ ];
         damaskWhy = [
           [
-            "reaches:tacks:pewter:grosgrain"
-            "tacks:grosgrain:damask"
+            (atom "tacks" "pewter" "grosgrain")
+            (key "tacks" "grosgrain" "damask")
           ]
         ];
       };

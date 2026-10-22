@@ -33,7 +33,13 @@
   program,
 }:
 let
-  keyOf = e: "${e.label}:${e.src}:${e.dst}";
+  keyOf =
+    e:
+    builtins.toJSON [
+      e.label
+      e.src
+      e.dst
+    ];
 
   # ── LIFT — a materialized graph into an EVALUATED SCOPE (den-hoag-gayc U2c) ──
   # The one structure gen-scope's resolution calculus walks. `lift perLabel ids` takes `perLabel`, an
@@ -250,8 +256,23 @@ let
         ) (p: (minted.nodes.${p.identifier}.kind or null) != p.kind) mintedRecs
         ++ faultsOf (p: "minted node '${p.identifier}' has edges that are not its promotion's relata") (
           p:
-          sorted (lib.mapAttrsToList (l: t: "${l}:${t}") p.relata)
-          != sorted (map (e: "${e.label}:${e.to}") (mintedEdgesOf p.identifier))
+          sorted (
+            lib.mapAttrsToList (
+              l: t:
+              builtins.toJSON [
+                l
+                t
+              ]
+            ) p.relata
+          ) != sorted (
+            map (
+              e:
+              builtins.toJSON [
+                e.label
+                e.to
+              ]
+            ) (mintedEdgesOf p.identifier)
+          )
         ) mintedRecs
         ++ faultsOf (
           e: "minted edge '${e.label}:${e.from}:${e.to}' is from '${e.from}', which is no minted node"

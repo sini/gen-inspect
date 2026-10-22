@@ -50,7 +50,13 @@ let
       # AN EDGE SURVIVES IFF BOTH ENDPOINTS DO. A dangling edge would make the IR′ describe a graph
       # whose source or target is not in it, and gen-graph's own labeled contract is node-set-total.
       keptEdges = builtins.filter (e: builtins.elem e.src ids && builtins.elem e.dst ids) ir.edges;
-      keyOf = e: "${e.label}:${e.src}:${e.dst}";
+      keyOf =
+        e:
+        builtins.toJSON [
+          e.label
+          e.src
+          e.dst
+        ];
       keptKeys = map keyOf keptEdges;
       keptIds = builtins.listToAttrs (
         map (id: {

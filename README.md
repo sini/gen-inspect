@@ -27,7 +27,7 @@ i = genInspect.mkInspector {
 i.facts                    # the IR
 i.query "SELECT …"         # the text surface
 i.select selector          # the programmatic surface; the result is an IR
-i.why "rings:hemony:bourdon"  # one atom's derivation: an edge's origin, or a reaches row's witnesses
+i.why (builtins.toJSON [ "rings" "hemony" "bourdon" ])  # one atom's derivation: an edge's origin, or a reaches row's witnesses
 i.render.mermaid { } i.facts   # the picture's source
 ```
 
@@ -134,7 +134,7 @@ $ nix eval --json .#inspect --apply 'i: i.query "SELECT dst FROM reaches WHERE s
 
 **The engine computes it and the relational fold consumes it.** Each constrained `(via, src)` becomes
 a gen-program declaration set over the IR's edges (one fact per edge, a base fact
-`reaches:via:s:s`, and one rule per edge extending a reach by that edge), solved by gen-scope's
+`["reaches", via, s, s]`, and one rule per edge extending a reach by that edge), solved by gen-scope's
 engine; this library computes no fixpoint of its own. The program has no negative literal, so it is
 a Horn program, and its well-founded model is its least model (Van Gelder, Ross & Schlipf 1991,
 Theorem 3.7): the reflexive-transitive closure, total. The relation is handed to the executor as a
@@ -152,9 +152,9 @@ entry declares; the graph walk follows it, and so does `reaches`.
 
 **`why` is one step.** On `edge` it is the IR's `origin`. On `reaches` it lists every rule of the
 query program whose body is true in the model — the same body-checked construction an edge's origin
-uses. Every edge atom a witness names is an IR key, so a reader chains `why` from a reachability row
+uses. An IR edge key is `builtins.toJSON [ label src dst ]` and a `reaches` atom is `builtins.toJSON [ "reaches" via src dst ]`, so an id containing `:` forges no other key and `why` refuses a colon-joined string by name. Every edge atom a witness names is an IR key, so a reader chains `why` from a reachability row
 to the edge to the rule that derived it. **Some one-step witnesses are circular**: on a cycle
-`treble ⇄ second`, `reaches:changes:treble:treble` has two derivations, the base fact and one through
+`treble ⇄ second`, `["reaches","changes","treble","treble"]` has two derivations, the base fact and one through
 `second` that leads back to itself. Each is a rule whose body is true, but together they are not a
 well-founded proof tree, and choosing one needs stage information the engine does not publish. So
 `why` never unfolds, and a reader unfolding by hand stops at a repeated atom.
@@ -232,7 +232,7 @@ $ nix repl .#
 Loading installable 'git+file:///…/gen-inspect?dir=examples/fleet#'...
 Added 3 variables.
 
-nix-repl> :p (builtins.head inspect.facts.origins."rings:hemony:bourdon".derivations).fired
+nix-repl> :p (builtins.head inspect.facts.origins.${builtins.toJSON [ "rings" "hemony" "bourdon" ]}.derivations).fired
 [
   { atom = "enrolled:hemony:full-circle"; sign = "pos"; verdict = "true"; }
   { atom = "admits:bourdon:full-circle"; sign = "pos"; verdict = "true"; }

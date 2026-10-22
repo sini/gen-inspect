@@ -19,6 +19,13 @@
 }:
 let
   i = admitted.inspector;
+  key =
+    label: src: dst:
+    builtins.toJSON [
+      label
+      src
+      dst
+    ];
   ir = i.facts;
 
   ringersOnly = i.select (genSelect.attrs { kind = "ringer"; });
@@ -65,13 +72,13 @@ in
               ]
             )
           );
-          o = keep.origins."rings:hemony:bourdon";
+          o = keep.origins.${key "rings" "hemony" "bourdon"};
         in
         {
           kind = o.kind;
           derivations = builtins.length o.derivations;
           fired = builtins.length (builtins.head o.derivations).fired;
-          identicalToTheSourceIr = o == ir.origins."rings:hemony:bourdon";
+          identicalToTheSourceIr = o == ir.origins.${key "rings" "hemony" "bourdon"};
         };
       expected = {
         kind = "rule";

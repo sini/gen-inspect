@@ -89,6 +89,10 @@ the positional `render.<r> ir` is refused by name.
   endpoint the IR admits, and a widened `frozen` alone drops that endpoint from the rows.
 - ★ **C2's recursion cell needs a depth-≥2 question in the ADMITTED state.** Every depth-1 question,
   and (`*`, hemony) withdrawn, reads green against a one-hop route with no recursion in it.
+- ★★ **An edge key and a `reaches` atom are JSON lists, never colon-joined.** `keyOf` is
+  `builtins.toJSON [ label src dst ]` and an atom is `builtins.toJSON [ "reaches" via src dst ]`;
+  a joined string lets an id containing `:` forge another edge, and `why` refuses a string that is not
+  a JSON list. `ci/tests/keys.nix` holds the colliding pair.
 - ★ **`origins` stays a FIELD of the IR, not a derived accessor.** Gate 3 needs provenance to survive
   `select` and `compile`; a derived accessor closes that seam.
 - ★ **`derivations` is a LIST and `fired` is per-derivation.** Recursion produces multiply-derived

@@ -139,8 +139,19 @@ let
 
   atom =
     via: s: d:
-    "reaches:${via}:${s}:${d}";
-  keyOf = e: "${e.label}:${e.src}:${e.dst}";
+    builtins.toJSON [
+      "reaches"
+      via
+      s
+      d
+    ];
+  keyOf =
+    e:
+    builtins.toJSON [
+      e.label
+      e.src
+      e.dst
+    ];
 
   # ONE ground program per `reaches` occurrence, over the `(via, src)` pairs it is constrained to.
   # ponytail: O(|E|) rules per (via, src) pair, O(|N|·|E|·(|L|+1)) unconstrained; a demand-driven
@@ -197,7 +208,11 @@ let
         builtins.concatMap (
           s:
           map (d: {
-            name = "${via}:${s}:${d}";
+            name = builtins.toJSON [
+              via
+              s
+              d
+            ];
             value = {
               src = s;
               dst = d;
@@ -307,10 +322,21 @@ let
   why =
     ir: a:
     let
-      p = lib.splitString ":" a;
-      via = lib.elemAt p 1;
-      s = lib.elemAt p 2;
-      k = "${via}:${s}:${lib.elemAt p 3}";
+      # Only a JSON list is an atom: a colon-joined string is not parsed, because it cannot say where
+      # one id ends and the next begins. `fromJSON` errors are not catchable, so the shape is gated first.
+      parsed = if builtins.substring 0 1 a == "[" then builtins.fromJSON a else null;
+      isAtom =
+        builtins.isList parsed
+        && lib.length parsed == 4
+        && lib.head parsed == "reaches"
+        && builtins.all builtins.isString parsed;
+      via = lib.elemAt parsed 1;
+      s = lib.elemAt parsed 2;
+      k = builtins.toJSON [
+        via
+        s
+        (lib.elemAt parsed 3)
+      ];
       rel = ground ir {
         viaSet = [ via ];
         srcSet = [ s ];
@@ -318,7 +344,7 @@ let
     in
     if ir.origins ? ${a} then
       ir.origins.${a}
-    else if lib.length p != 4 || lib.head p != "reaches" then
+    else if !isAtom then
       throw "gen-inspect: '${a}' is neither an IR edge key nor a reaches atom"
     else if !(builtins.elem via (vias ir)) then
       throw "gen-inspect: unknown via '${via}'; known: ${builtins.concatStringsSep ", " (vias ir)}"

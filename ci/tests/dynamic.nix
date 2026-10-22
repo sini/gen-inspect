@@ -24,7 +24,14 @@
 }:
 let
   ir = admitted.inspector.facts;
-  origin = ir.origins."rings:hemony:bourdon";
+  key =
+    label: src: dst:
+    builtins.toJSON [
+      label
+      src
+      dst
+    ];
+  origin = ir.origins.${key "rings" "hemony" "bourdon"};
   derivation = builtins.head origin.derivations;
 
   verdict = admitted.model.verdict;
@@ -36,7 +43,7 @@ let
     e:
     builtins.concatMap (
       d: builtins.filter (f: f.verdict != (if f.sign == "pos" then "true" else "false")) d.fired
-    ) ir.origins."${e.label}:${e.src}:${e.dst}".derivations
+    ) ir.origins.${key e.label e.src e.dst}.derivations
   ) (builtins.filter (e: e.origin.kind == "rule") ir.edges);
 
   # ── THE RED ARM, BUILT. ──
@@ -189,7 +196,7 @@ in
     test-the-parity-predicate-quantifies-over-something = {
       expr = builtins.length (
         builtins.concatMap (d: d.fired) (
-          builtins.concatMap (e: ir.origins."${e.label}:${e.src}:${e.dst}".derivations) (
+          builtins.concatMap (e: ir.origins.${key e.label e.src e.dst}.derivations) (
             builtins.filter (e: e.origin.kind == "rule") ir.edges
           )
         )

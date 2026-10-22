@@ -409,6 +409,13 @@ in
       expectedError.msg = exactly "gen-inspect: 'rings:hemony' is neither an IR edge key nor a reaches atom";
     };
 
+    # A colon-joined atom is the retired spelling: it cannot say where one id ends, so it is refused
+    # rather than split.
+    test-why-refuses-a-colon-string-reaches-atom = {
+      expr = admitted.inspector.why "reaches:*:hemony:bourdon";
+      expectedError.msg = exactly "gen-inspect: 'reaches:*:hemony:bourdon' is neither an IR edge key nor a reaches atom";
+    };
+
     # ── DOOR 6: ★ A REACHED EDGE WITH NO IR EDGE ──
     # THE DOOR THAT MAKES THE DERIVED LABEL SET SELF-CHECKING. Driven from a subject rather than by
     # editing the library: an edge gen-program reaches at a PUBLISHED label that nothing gives an IR
@@ -416,7 +423,7 @@ in
     # that label with a true edge missing and nothing said.
     test-a-reached-edge-with-no-ir-edge-is-refused-by-name = {
       expr = builtins.deepSeq strayIr.origins strayIr;
-      expectedError.msg = exactly "gen-inspect: reached edge(s) with neither a firing rule nor a declared relation: housed:bourdon:campanile";
+      expectedError.msg = exactly "gen-inspect: reached edge(s) with neither a firing rule nor a declared relation: [\"housed\",\"bourdon\",\"campanile\"]";
     };
 
     # ── DOOR 10: ★ AN UNDEFINED HEAD IS REFUSED BY NAME, NOT DROPPED ──

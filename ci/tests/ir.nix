@@ -40,8 +40,14 @@ let
     } true;
 
   originKind = k: x: builtins.length (builtins.filter (e: e.origin.kind == k) x.edges);
-  keysOf =
-    x: map (e: "${e.label}:${e.src}:${e.dst}") (builtins.filter (e: e.origin.kind == "rule") x.edges);
+  key =
+    label: src: dst:
+    builtins.toJSON [
+      label
+      src
+      dst
+    ];
+  keysOf = x: map (e: key e.label e.src e.dst) (builtins.filter (e: e.origin.kind == "rule") x.edges);
 
   # The negative-cycle fixture of `ci/tests-error.nix` WITHOUT its contest: `reach:a:b :- not held:a:b`
   # and no rule for `held:a:b`, so the head is `true` rather than UNDEFINED.
@@ -85,7 +91,7 @@ let
     };
   reachedOf =
     declarations: model:
-    map (e: "${e.label}:${e.from}:${e.to}") (genProgram.ruleEdges model declarations).reached;
+    map (e: key e.label e.from e.to) (genProgram.ruleEdges model declarations).reached;
 in
 {
   flake.tests.ir = {
@@ -139,8 +145,8 @@ in
     test-the-rule-keys-include-a-derived-edge-at-a-declared-label = {
       expr = keysOf ir;
       expected = [
-        "enrolled:hemony:full-circle"
-        "rings:hemony:bourdon"
+        (key "enrolled" "hemony" "full-circle")
+        (key "rings" "hemony" "bourdon")
       ];
     };
 
@@ -217,7 +223,7 @@ in
         rule = originKind "rule" irOut;
         origins = builtins.length (builtins.attrNames irOut.origins);
         keys = keysOf irOut;
-        ringsPresent = irOut.origins ? "rings:hemony:bourdon";
+        ringsPresent = irOut.origins ? ${key "rings" "hemony" "bourdon"};
         nodesUnchanged = builtins.length irOut.nodes;
         labelsUnchanged = irOut.labels;
       };
@@ -226,7 +232,7 @@ in
         declaration = 12;
         rule = 1;
         origins = 13;
-        keys = [ "enrolled:hemony:full-circle" ];
+        keys = [ (key "enrolled" "hemony" "full-circle") ];
         ringsPresent = false;
         nodesUnchanged = 14;
         labelsUnchanged = [
