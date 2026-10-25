@@ -36,11 +36,39 @@ let
         if builtins.isString v then v else builtins.foldl' following lock.root v;
     in
     segs: builtins.foldl' following lock.root segs;
-  fetch = resolve lock;
+  # `fetch` IS THE SHIM'S WHOLE PATH-TO-STORE-PATH CONCERN, AND IT LEAVES THROUGH `wire`'s RECORD:
+  # the resolver above, `node` (that resolver on this lock) and `locked` (a node's store path), so the
+  # entry cells drive these exact bindings rather than a transcription of them.
+  fetch = {
+    inherit resolve;
+    node = resolve lock;
+    # A locked node's store path through the FIXED-OUTPUT form: upstream Nix returns a valid path without
+    # consulting its git tarball cache. `github` only, over its exact key set; anything else refuses by
+    # name rather than falling back to `fetchTree`.
+    locked =
+      locked:
+      if
+        builtins.attrNames locked == [
+          "lastModified"
+          "narHash"
+          "owner"
+          "repo"
+          "rev"
+          "type"
+        ]
+        && locked.type == "github"
+      then
+        builtins.fetchTarball {
+          url = "https://github.com/${locked.owner}/${locked.repo}/archive/${locked.rev}.tar.gz";
+          sha256 = locked.narHash;
+        }
+      else
+        throw "gen-inspect: a locked node of type `${toString (locked.type or null)}` with attributes ${toString (builtins.attrNames locked)} has no fixed-output form here; refusing rather than falling back to fetchTree";
+  };
 in
 {
   inputs ? { },
-  src ? segs: "${builtins.fetchTree lock.nodes.${fetch segs}.locked}",
+  src ? segs: fetch.locked lock.nodes.${fetch.node segs}.locked,
   # `import p { }` is the ONE call text that answers every gen dependency alike (den-hoag-iev2q): a
   # zero-dependency member's root is a NULLARY FUNCTION and not a bare value, so there is no second
   # shape here to dispatch on.
@@ -49,11 +77,17 @@ in
   # OUTWARD. Nix publishes WHETHER a formal has a default and never WHAT it is — a formal is an
   # INPUT channel and cannot carry a value out — so the one place a formal NAME and its resolved
   # PATH are both in scope is this file's argument TO `wire`, and the same argument is what carries
-  # `resolve` out. A cell injecting `dep = segs: segs` alongside `wire = args: args` reads this
+  # `fetch` and `lock` out. A cell injecting `dep = segs: segs` alongside `wire = args: args` reads this
   # shim's own formal-to-path map AND its own resolver, with nothing fetched and no path and no fold
   # restated by hand. The record destructures with no `...`, so a drifted body shape is a loud error
   # at the default rather than a silent drop.
-  wire ? { deps, resolve }: import ./lib deps,
+  wire ?
+    {
+      deps,
+      fetch,
+      lock,
+    }:
+    import ./lib deps,
   prelude ? inputs.gen-prelude or (dep [ "gen-prelude" ]),
   graph ? inputs.gen-graph or (dep [ "gen-graph" ]),
   select ? inputs.gen-select or (dep [ "gen-select" ]),
@@ -90,5 +124,5 @@ let
   forced = builtins.deepSeq (builtins.mapAttrs (_: builtins.typeOf) deps) null;
 in
 builtins.seq forced (wire {
-  inherit deps resolve;
+  inherit deps fetch lock;
 })
