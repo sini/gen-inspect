@@ -165,11 +165,11 @@
         "gen-algebra": "gen-algebra_3"
       },
       "locked": {
-        "lastModified": 1795405419,
-        "narHash": "sha256-Wuxcpx21uJragpCSXjKOl0TxBUKNw/29x+VqJEcEr9E=",
+        "lastModified": 1795454406,
+        "narHash": "sha256-9PfEuv/qk2FxMopD2FX1fcoXrsZq6xc1LAH9Edu1wwA=",
         "owner": "sini",
         "repo": "gen-select",
-        "rev": "2f26ad97664ebcd7bc602b782bd4888233798fb4",
+        "rev": "c17dfef17a0869655b08b652d6760e1b8c58f894",
         "type": "github"
       },
       "original": {
